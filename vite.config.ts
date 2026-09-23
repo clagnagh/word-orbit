@@ -5,5 +5,7 @@ export default defineConfig({
   base: './',
   test: {
     include: ['tests/**/*.test.ts'],
+    // A fixed zone with daylight saving, so date tests behave the same on every machine.
+    env: { TZ: 'America/New_York' },
   },
 });

@@ -11,14 +11,15 @@ A daily word puzzle game: letter tiles orbit a planet; tap letters to spell word
 
 ## Commands
 
-| Command             | What it does                              |
-| ------------------- | ----------------------------------------- |
-| `npm run dev`       | Dev server at http://localhost:5173       |
-| `npm test`          | Vitest (core logic tests in `tests/`)     |
-| `npm run typecheck` | `tsc --noEmit`                            |
-| `npm run lint`      | ESLint                                    |
-| `npm run format`    | Prettier (rewrites files)                 |
-| `npm run build`     | Typecheck + production build into `dist/` |
+| Command             | What it does                                                                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`       | Dev server at http://localhost:5173                                                                                                                     |
+| `npm test`          | Vitest (core logic tests in `tests/`)                                                                                                                   |
+| `npm run typecheck` | `tsc --noEmit`                                                                                                                                          |
+| `npm run lint`      | ESLint                                                                                                                                                  |
+| `npm run format`    | Prettier (rewrites files)                                                                                                                               |
+| `npm run build`     | Typecheck + production build into `dist/`                                                                                                               |
+| `npm run wordlists` | Rebuild `src/data/*.json` from the sources in `CREDITS.md` (Node 22.18+). Edit `scripts/blocklist.txt` to remove words, then rerun and commit the JSON. |
 
 Run `npm test` and `npm run typecheck` after every task.
 

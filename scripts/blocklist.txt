@@ -1,0 +1,35 @@
+# Words removed from both word lists, on top of the LDNOOBW offensive-word list.
+# One word per line. Plurals and verb forms (murders, murdered) are removed automatically.
+# After editing, run `npm run wordlists` and commit the updated src/data/*.json.
+
+# Grim or adult themes, found among the common key-word candidates.
+abuse
+assault
+bloody
+bullet
+cancer
+corpse
+deadly
+disease
+drunk
+drunken
+execute
+funeral
+heroin
+killer
+lethal
+liquor
+murder
+naked
+poison
+racism
+racist
+slave
+suicide
+terror
+tobacco
+torture
+victim
+violent
+virgin
+weapon
