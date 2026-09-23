@@ -184,15 +184,23 @@ Scenes only **send actions** to `core/game.ts` and **draw the returned state**. 
 
 ### Milestone 2 — Puzzle generation, game state & scoring (core)
 
-- [ ] `puzzle.ts`: `generatePuzzle(seed)` returns 3 levels. Each has its letters, key word, and list of all valid words.
-- [ ] `game.ts`: a reducer with actions `start`, `tapLetter`, `removeLast`, `clear`, `submit`, `tick`, and `nextLevel`, plus events for the renderer: `wordAccepted`, `wordRejected(reason)`, `keyWordFound`, `levelEnded`, and `gameOver`.
-- [ ] `scoring.ts` and `share.ts`, as described in section 2.
-- [ ] `stats.ts`: pure functions, with storage passed in as a parameter.
-- [ ] A dev script, `npm run puzzle -- 2026-10-01`, that prints that date's puzzle in the terminal (to help me debug without the browser).
-- [ ] Tests for every rule in section 4, plus scoring and combo maths, and share text never containing the answer words.
+- [x] `puzzle.ts`: `generatePuzzle(seed)` returns 3 levels. Each has its letters, key word, and list of all valid words.
+- [x] `game.ts`: a reducer with actions `start`, `tapLetter`, `removeLast`, `clear`, `submit`, `tick`, and `nextLevel`, plus events for the renderer: `wordAccepted`, `wordRejected(reason)`, `keyWordFound`, `levelEnded`, and `gameOver`.
+- [x] `scoring.ts` and `share.ts`, as described in section 2.
+- [x] `stats.ts`: pure functions, with storage passed in as a parameter.
+- [x] A dev script, `npm run puzzle -- 2026-10-01`, that prints that date's puzzle in the terminal (to help me debug without the browser).
+- [x] Tests for every rule in section 4, plus scoring and combo maths, and share text never containing the answer words.
 
 **Done when:** I can "play" a whole game in a Vitest test, without any graphics.
 **Explain to me:** reducers and state machines, why the renderer receives _events_, and what dependency injection means (storage and time).
+
+_Decisions made during Milestone 2:_
+
+- Daily key words follow a fixed shuffled order per length, so none repeats for 688+ days. `generatePuzzle(seed)` (random picks) is kept for Endless mode.
+- Any valid word using all the letters (e.g. an anagram like SHORE for HORSE) counts as the key word.
+- Game-rule numbers (timers, points, combo) live in `src/core/rules.ts`; feel numbers stay in `tuning.ts`.
+- `reduce` returns `{ state, events }`. Extra action `typeLetter` (keyboard picks the tile in the core) and extra event `levelStarted`.
+- Word lists are passed into `generateDailyPuzzle(n, lists)`, not imported by the core.
 
 ### Milestone 3 — Grey-box gameplay (rendering, no polish yet)
 
@@ -284,6 +292,7 @@ Juice means small effects that make actions feel satisfying.
 - [ ] Own website: deploy to Netlify or GitHub Pages, with basic meta tags and a social preview image.
 - [ ] Privacy note: the game stores data only in the browser; list it plainly. Update this note if portal ads add tracking.
 - [ ] Write a CHANGELOG and tag `v1.0.0`.
+- [ ] **Freeze past puzzles.** After launch, any change to the word lists, blocklist or generator changes the puzzles for everyone, including today's. Before `v1.0.0`, decide how list updates only affect future dates (e.g. versioned lists with a start date).
 
 **Done when:** the game is live on itch.io and my own URL, and a friend has played it from a shared link.
 **Explain to me:** the adapter pattern, build-time environment variables, and why `base: './'` matters.

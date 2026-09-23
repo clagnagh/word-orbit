@@ -1,4 +1,4 @@
-import { hashString } from './rng';
+import { hashString } from './rng.ts';
 
 /** Puzzle #1 is played on this local calendar date. Month is 1-based. */
 export const LAUNCH_DATE = { year: 2026, month: 10, day: 1 } as const;
