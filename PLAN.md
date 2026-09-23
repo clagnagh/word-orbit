@@ -89,17 +89,18 @@ An original, calm, space-themed style: a dark gradient background, soft glowing 
 
 ## 3. Tech Stack & Conventions
 
-| Area                 | Choice                                                                                                                                                                                                      |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Language             | TypeScript (strict mode) — pinned to 5.9 because typescript-eslint doesn't support 7.x yet                                                                                                                  |
-| Game engine          | Phaser 3 (3.90) — chosen over Phaser 4 because most tutorials and examples target 3                                                                                                                         |
-| Bundler / dev server | Vite (vanilla-ts template)                                                                                                                                                                                  |
-| Tests                | Vitest (core logic only)                                                                                                                                                                                    |
-| Lint/format          | ESLint + Prettier, with `no-restricted-imports` blocking `phaser` inside `src/core/**` (plus `no-restricted-globals` for browser globals, and bans on `Date.now` / `Math.random`)                           |
-| Sound                | zzfx (tiny sound synthesizer, no audio files needed). _Ask me before installing._                                                                                                                           |
-| Debug tweaking       | lil-gui, loaded only in dev mode. _Ask me before installing._                                                                                                                                               |
-| Word list            | An open-licensed English word list, such as ENABLE. **Before using any list, stop and tell me: its licence, where to download it, and how you'll filter it.** Keep only lowercase a–z words of 3–7 letters. |
-| Key-word list        | A separate, curated list of common, family-friendly 5/6/7-letter words. Offensive words are filtered out of _both_ lists.                                                                                   |
+| Area                 | Choice                                                                                                                                                                                                                                                     |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Language             | TypeScript (strict mode) — pinned to 5.9 because typescript-eslint doesn't support 7.x yet                                                                                                                                                                 |
+| Game engine          | Phaser 3 (3.90) — chosen over Phaser 4 because most tutorials and examples target 3                                                                                                                                                                        |
+| Bundler / dev server | Vite (vanilla-ts template)                                                                                                                                                                                                                                 |
+| Tests                | Vitest (core logic only)                                                                                                                                                                                                                                   |
+| Lint/format          | ESLint + Prettier, with `no-restricted-imports` blocking `phaser` inside `src/core/**` (plus `no-restricted-globals` for browser globals, and bans on `Date.now` / `Math.random`)                                                                          |
+| Sound                | zzfx (tiny sound synthesizer, no audio files needed). _Ask me before installing._                                                                                                                                                                          |
+| Debug tweaking       | lil-gui, loaded only in dev mode. _Ask me before installing._                                                                                                                                                                                              |
+| Word list            | An open-licensed English word list, such as ENABLE. **Before using any list, stop and tell me: its licence, where to download it, and how you'll filter it.** Keep only lowercase a–z words of 3–7 letters. **Approved: ENABLE (public domain).**          |
+| Key-word list        | A separate, curated list of common, family-friendly 5/6/7-letter words. Offensive words are filtered out of _both_ lists. **Approved: SCOWL sizes 10–20 ∩ ENABLE, minus inflections; LDNOOBW + `scripts/blocklist.txt` filter. Licences in `CREDITS.md`.** |
+| Node types           | `@types/node` (dev only) so `scripts/` can be typechecked. Approved in Milestone 1.                                                                                                                                                                        |
 
 ### Project layout
 
@@ -172,11 +173,11 @@ Scenes only **send actions** to `core/game.ts` and **draw the returned state**. 
 
 ### Milestone 1 — Randomness, dates & dictionary (core)
 
-- [ ] `rng.ts`: a seeded PRNG plus a string hash, with helpers `nextInt`, `pick`, and `shuffle`.
-- [ ] `daily.ts`: `puzzleNumberFor(date)`, `seedFor(puzzleNumber)`, and `msUntilNextPuzzle(now)`.
-- [ ] `scripts/build-wordlists.ts` produces `src/data/words.json` and `src/data/keywords.json` (after I approve the word list source).
-- [ ] `dictionary.ts`: `isValid(word)` and `canBuildFrom(word, letters)`, which respects letter counts.
-- [ ] Tests: determinism, uniform-looking distribution (a rough check), date edge cases (midnight, leap day, daylight saving changes), and repeated letters.
+- [x] `rng.ts`: a seeded PRNG plus a string hash, with helpers `nextInt`, `pick`, and `shuffle`.
+- [x] `daily.ts`: `puzzleNumberFor(date)`, `seedFor(puzzleNumber)`, and `msUntilNextPuzzle(now)`.
+- [x] `scripts/build-wordlists.ts` produces `src/data/words.json` and `src/data/keywords.json` (after I approve the word list source).
+- [x] `dictionary.ts`: `isValid(word)` and `canBuildFrom(word, letters)`, which respects letter counts.
+- [x] Tests: determinism, uniform-looking distribution (a rough check), date edge cases (midnight, leap day, daylight saving changes), and repeated letters.
 
 **Done when:** tests pass, and the word list JSON is under 1 MB.
 **Explain to me:** what "seeded randomness" means and why daily puzzles need it, plus multisets (counting letters).

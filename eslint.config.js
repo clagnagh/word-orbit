@@ -20,15 +20,18 @@ export default tseslint.config(
               group: ['**/game/**', '**/platform/**', '**/storage'],
               message: 'src/core must not depend on rendering, platform or storage code.',
             },
+            { group: ['node:*'], message: 'src/core must run in the browser: no Node modules.' },
           ],
         },
       ],
       'no-restricted-globals': [
         'error',
-        ...['window', 'document', 'localStorage', 'sessionStorage', 'navigator'].map((name) => ({
-          name,
-          message: 'src/core must stay pure: pass browser things in as parameters.',
-        })),
+        ...['window', 'document', 'localStorage', 'sessionStorage', 'navigator', 'process'].map(
+          (name) => ({
+            name,
+            message: 'src/core must stay pure: pass outside things in as parameters.',
+          }),
+        ),
       ],
       'no-restricted-properties': [
         'error',
