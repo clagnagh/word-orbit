@@ -5,11 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Word Orbit</title>
     <style>
+      /* Fredoka (SIL Open Font License, see public/fonts/OFL.txt), bundled so it works offline. */
+      @font-face {
+        font-family: 'Fredoka';
+        font-weight: 400 700;
+        font-display: block;
+        src: url('./fonts/fredoka-latin.woff2') format('woff2');
+      }
       html,
       body {
         margin: 0;
         height: 100%;
-        background: #0b1026;
+        background: linear-gradient(#0a0f24, #1b1646);
         overflow: hidden;
       }
       #game {

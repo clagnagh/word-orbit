@@ -33,3 +33,9 @@ SCOWL's size 10 and 20 lists draw on the public-domain Moby Words II and 12Dicts
 Used only to remove offensive words from both lists.
 https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words —
 licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) by Shutterstock.
+
+## Fredoka font
+
+The game's typeface, bundled in `public/fonts/`. Copyright 2016 The Fredoka Project Authors
+(https://github.com/hafontia/Fredoka-One), licensed under the
+[SIL Open Font License 1.1](public/fonts/OFL.txt). Downloaded from Google Fonts.
