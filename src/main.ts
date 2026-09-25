@@ -1,15 +1,21 @@
 import Phaser from 'phaser';
-import { HelloScene } from './game/scenes/HelloScene';
+import { tuning } from './config/tuning.ts';
+import { MenuScene } from './game/scenes/MenuScene.ts';
+import { PlayScene } from './game/scenes/PlayScene.ts';
+import { ResultsScene } from './game/scenes/ResultsScene.ts';
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
-  backgroundColor: '#0b1026',
+  backgroundColor: tuning.colors.background,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 720,
-    height: 1280,
+    width: tuning.layout.width,
+    height: tuning.layout.height,
   },
-  scene: [HelloScene],
+  scene: [MenuScene, PlayScene, ResultsScene],
 });
+
+// Dev builds only: lets browser tests and the console inspect the running game.
+if (import.meta.env.DEV) Object.assign(window, { wordOrbit: game });

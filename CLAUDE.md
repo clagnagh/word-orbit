@@ -33,6 +33,9 @@ Run `npm test` and `npm run typecheck` after every task.
 - **Rules vs feel.** Game-rule numbers (timers, points, combo) live in `src/core/rules.ts`.
 - **Tuning file.** Every feel number (speeds, durations, sizes, colours, shake strength) lives in `src/config/tuning.ts`. Scenes never hard-code them. Try to meet feel requests by changing tuning values first, and say which values changed and why.
 - **Portrait design size** is 720×1280 with `Phaser.Scale.FIT`.
+- **Keyboard input uses `window` `keydown` listeners**, removed on scene `SHUTDOWN`. Don't use Phaser's keyboard plugin for typing: its queue replayed earlier keys in frames with pointer input, adding duplicate letters.
+- **Tap detection** uses the pure helpers in `src/game/hitTest.ts` (nearest tile within an enlarged radius), not per-object Phaser hit areas.
+- **Browser testing:** dev builds expose the Phaser game as `window.wordOrbit` (e.g. `wordOrbit.scene.getScene('Play').state`). It is stripped from production builds. Headless Chromium + Playwright is available for driving the game.
 - `vite.config.ts` must keep `base: './'` so builds work from a subfolder (itch.io, portals).
 - Don't edit `LEARNINGS.md` unless asked.
 

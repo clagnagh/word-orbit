@@ -206,11 +206,11 @@ _Decisions made during Milestone 2:_
 
 Make it work before making it pretty. Use plain circles and rectangles only.
 
-- [ ] Play scene: a planet circle in the centre, letter tiles orbiting at a radius set in `tuning.ts`, evenly spaced, rotating at the level's speed.
-- [ ] Tap input on tiles (with a generous hit area), the planet (submit), and the tray. Add keyboard input for desktop.
-- [ ] A tray showing the current word, a score display, a timer display, and a list of found words.
-- [ ] Scenes wired to the reducer: Menu → Play (3 levels) → Results (score and share preview text).
-- [ ] Portrait design resolution of 720×1280 with Phaser `Scale.FIT`.
+- [x] Play scene: a planet circle in the centre, letter tiles orbiting at a radius set in `tuning.ts`, evenly spaced, rotating at the level's speed.
+- [x] Tap input on tiles (with a generous hit area), the planet (submit), and the tray. Add keyboard input for desktop.
+- [x] A tray showing the current word, a score display, a timer display, and a list of found words.
+- [x] Scenes wired to the reducer: Menu → Play (3 levels) → Results (score and share preview text).
+- [x] Portrait design resolution of 720×1280 with Phaser `Scale.FIT`.
 
 **Done when:** I can play a full daily puzzle from start to finish with placeholder graphics.
 **Explain to me:** the Phaser game loop (`update`), how orbit positions come from sin/cos, and why tapping moving targets needs bigger hit areas.

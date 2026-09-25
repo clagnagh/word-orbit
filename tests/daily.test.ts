@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { msUntilNextPuzzle, puzzleNumberFor, seedFor } from '../src/core/daily';
+import {
+  msUntilNextPuzzle,
+  playablePuzzleNumber,
+  puzzleNumberFor,
+  seedFor,
+} from '../src/core/daily';
 
 // Local-time dates (month is 0-based in the Date constructor).
 const local = (y: number, m: number, d: number, h = 0, min = 0, s = 0) =>
@@ -61,6 +66,21 @@ describe('puzzleNumberFor', () => {
       expect(puzzleNumberFor(d)).toBe(expected);
       d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 12);
     }
+  });
+});
+
+describe('playablePuzzleNumber', () => {
+  it('previews puzzle #1 before launch', () => {
+    expect(playablePuzzleNumber(local(2026, 9, 25))).toEqual({ puzzleNumber: 1, isPreview: true });
+    expect(playablePuzzleNumber(local(2026, 9, 30, 23, 59))).toEqual({
+      puzzleNumber: 1,
+      isPreview: true,
+    });
+  });
+
+  it('plays the real daily from launch day on', () => {
+    expect(playablePuzzleNumber(local(2026, 10, 1))).toEqual({ puzzleNumber: 1, isPreview: false });
+    expect(playablePuzzleNumber(local(2026, 10, 5))).toEqual({ puzzleNumber: 5, isPreview: false });
   });
 });
 
