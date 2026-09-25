@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "wordlists": "node scripts/build-wordlists.ts"
+    "wordlists": "node scripts/build-wordlists.ts",
+    "puzzle": "node scripts/puzzle.ts"
   },
   "dependencies": {
     "phaser": "^3.90.0"

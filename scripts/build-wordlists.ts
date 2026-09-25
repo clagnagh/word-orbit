@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
+import { LEVELS, MIN_BONUS_WORDS, MIN_WORD_LENGTH } from '../src/core/rules.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = join(ROOT, 'scripts', '.cache');
@@ -19,9 +20,9 @@ const SOURCES = {
     'https://raw.githubusercontent.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/master/en',
 };
 
-const MIN_WORD = 3;
-const MAX_WORD = 7;
-const KEYWORD_LENGTHS = [5, 6, 7] as const;
+const KEYWORD_LENGTHS = LEVELS.map((level) => level.letters);
+const MIN_WORD = MIN_WORD_LENGTH;
+const MAX_WORD = Math.max(...KEYWORD_LENGTHS);
 // SCOWL sizes 10 and 20 hold the most common English words.
 const SCOWL_COMMON_FILES = ['english-words.10', 'english-words.20'];
 const MAX_WORDS_JSON_BYTES = 1_000_000;
@@ -81,6 +82,30 @@ function baseForms(word: string): string[] {
   return forms.filter((f) => f.length >= MIN_WORD);
 }
 
+/**
+ * Returns a function counting the shorter words that can be built from a key word's letters.
+ * Same idea as canBuildFrom in src/core/dictionary.ts, using fixed-size arrays
+ * because it runs about 100 million times.
+ */
+function bonusWordCounter(words: string[]): (keyWord: string) => number {
+  const toCounts = (w: string) => {
+    const counts = new Uint8Array(26);
+    for (let i = 0; i < w.length; i++) counts[w.charCodeAt(i) - 97]!++;
+    return counts;
+  };
+  const entries = words.map((w) => ({ length: w.length, counts: toCounts(w) }));
+  return (keyWord) => {
+    const available = toCounts(keyWord);
+    let n = 0;
+    outer: for (const { length, counts } of entries) {
+      if (length >= keyWord.length) continue;
+      for (let c = 0; c < 26; c++) if (counts[c]! > available[c]!) continue outer;
+      n++;
+    }
+    return n;
+  };
+}
+
 async function main(): Promise<void> {
   const [enableRaw, scowlRaw, offensiveRaw] = await Promise.all([
     download('enable1.txt', SOURCES.enable),
@@ -116,10 +141,15 @@ async function main(): Promise<void> {
   }
   const common = new Set([...scowlFiles.values()].flatMap((f) => toLines(f.toString('latin1'))));
 
+  const bonusCount = bonusWordCounter(words);
   const keywords: Record<string, string[]> = {};
   for (const len of KEYWORD_LENGTHS) {
     keywords[len] = words.filter(
-      (w) => w.length === len && common.has(w) && !baseForms(w).some((base) => wordSet.has(base)),
+      (w) =>
+        w.length === len &&
+        common.has(w) &&
+        !baseForms(w).some((base) => wordSet.has(base)) &&
+        bonusCount(w) >= MIN_BONUS_WORDS,
     );
   }
 
