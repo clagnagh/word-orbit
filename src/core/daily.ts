@@ -18,6 +18,12 @@ export function puzzleNumberFor(date: Date): number {
   return dayIndex(date.getFullYear(), date.getMonth(), date.getDate()) - LAUNCH_INDEX + 1;
 }
 
+/** The puzzle to play on a date. Before launch there is no daily yet, so everyone previews #1. */
+export function playablePuzzleNumber(date: Date): { puzzleNumber: number; isPreview: boolean } {
+  const n = puzzleNumberFor(date);
+  return n >= 1 ? { puzzleNumber: n, isPreview: false } : { puzzleNumber: 1, isPreview: true };
+}
+
 export function seedFor(puzzleNumber: number): number {
   return hashString(`word-orbit:${puzzleNumber}`);
 }
