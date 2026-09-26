@@ -6,6 +6,7 @@ const { fonts, palette, tile } = tuning;
 
 export class LetterTile extends Phaser.GameObjects.Container {
   private readonly ring: Phaser.GameObjects.Arc;
+  private readonly hintRing: Phaser.GameObjects.Arc;
   private readonly label: Phaser.GameObjects.Text;
   private readonly badge: Phaser.GameObjects.Container;
   private readonly badgeText: Phaser.GameObjects.Text;
@@ -44,7 +45,12 @@ export class LetterTile extends Phaser.GameObjects.Container {
       ])
       .setVisible(false);
 
-    this.add([shadow, face, this.ring, this.label, this.badge]);
+    const { hint } = tuning;
+    this.hintRing = scene.add
+      .circle(0, 0, radius + hint.ringGap)
+      .setStrokeStyle(hint.ringWidth, palette.planet)
+      .setVisible(false);
+    this.add([this.hintRing, shadow, face, this.ring, this.label, this.badge]);
     scene.add.existing(this);
   }
 
@@ -55,5 +61,22 @@ export class LetterTile extends Phaser.GameObjects.Container {
     this.badge.setVisible(selected);
     this.badgeText.setText(selected ? String(order) : '');
     this.label.setAlpha(selected ? tile.selectedLetterAlpha : 1);
+  }
+
+  /** A pulsing teal ring for a few seconds: the hint. */
+  showHint(): void {
+    const { hint } = tuning;
+    this.hintRing.setVisible(true).setAlpha(1);
+    const pulse = this.scene.tweens.add({
+      targets: this.hintRing,
+      alpha: 0.3,
+      duration: hint.pulseMs,
+      yoyo: true,
+      repeat: -1,
+    });
+    this.scene.time.delayedCall(hint.glowMs, () => {
+      pulse.remove();
+      if (this.active) this.hintRing.setVisible(false);
+    });
   }
 }

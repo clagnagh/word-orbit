@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  goalProgress,
+  levelGoal,
   newGame,
   reduce,
   summarize,
@@ -292,5 +294,101 @@ describe('levels', () => {
         { keyWordFound: true, wordCount: 1 },
       ],
     });
+  });
+});
+
+describe('mini-goal', () => {
+  it('asks for 2 words of one letter fewer than the level', () => {
+    expect(levelGoal(puzzle.levels[0]!)).toEqual({ count: 2, length: 4 }); // eels, lets, tees
+    expect(levelGoal(puzzle.levels[1]!)).toEqual({ count: 2, length: 5 }); // panel, plane, plant
+  });
+
+  it('falls back to a shorter length when the level has fewer than 2 such words', () => {
+    // Level 3 has no 6-letter words and only one 5-letter word (orbit), but two 4-letter ones.
+    expect(levelGoal(puzzle.levels[2]!)).toEqual({ count: 2, length: 4 });
+  });
+
+  it('awards 300 × level once, when the second goal word is found', () => {
+    const { state, events } = run(
+      started(),
+      ...submitWord('eels', 1_000),
+      ...submitWord('lets', 20_000),
+      ...submitWord('tees', 40_000),
+    );
+    expect(events.filter((e) => e.type === 'goalCompleted')).toEqual([
+      { type: 'goalCompleted', bonus: 300 },
+    ]);
+    expect(events.map((e) => e.type)).toEqual([
+      'wordAccepted',
+      'wordAccepted',
+      'goalCompleted',
+      'wordAccepted',
+    ]);
+    expect(goalProgress(state)).toBe(2);
+    expect(totalScore(state)).toBe(160 * 3 + 300);
+  });
+
+  it('does not count words of other lengths', () => {
+    const { state, events } = run(
+      started(),
+      ...submitWord('eel', 1_000),
+      ...submitWord('let', 20_000),
+    );
+    expect(events.some((e) => e.type === 'goalCompleted')).toBe(false);
+    expect(goalProgress(state)).toBe(0);
+  });
+
+  it('uses level 2 numbers on level 2', () => {
+    const level2 = run(started(), ...submitWord('steel', 1_000), { type: 'nextLevel', now: 2_000 });
+    const { events } = run(
+      level2.state,
+      ...submitWord('panel', 3_000),
+      ...submitWord('plane', 20_000),
+    );
+    expect(events.at(-1)).toEqual({ type: 'goalCompleted', bonus: 600 });
+  });
+});
+
+describe('hint', () => {
+  const withScore = () => run(started(), ...submitWord('lets', 1_000)).state; // 160 points
+
+  it('shows the first tile holding the key word’s first letter, and costs 100', () => {
+    const { state, events } = run(withScore(), { type: 'hint' });
+    // Key word STEEL starts with S, which is tile 3.
+    expect(events).toEqual([{ type: 'hintShown', tileId: 3, cost: 100 }]);
+    expect(totalScore(state)).toBe(60);
+  });
+
+  it('never takes the score below 0', () => {
+    const { state, events } = run(started(), { type: 'hint' });
+    expect(events).toEqual([{ type: 'hintShown', tileId: 3, cost: 0 }]);
+    expect(totalScore(state)).toBe(0);
+    const partial = run(started(), ...submitWord('let', 1_000), { type: 'hint' });
+    expect(totalScore(partial.state)).toBe(0);
+    expect(partial.events.at(-1)).toMatchObject({ cost: 90 });
+  });
+
+  it('works once per level; asking again changes nothing', () => {
+    const used = run(withScore(), { type: 'hint' }).state;
+    const again = reduce(used, { type: 'hint' });
+    expect(again.events).toEqual([{ type: 'hintUnavailable' }]);
+    expect(again.state).toBe(used);
+  });
+
+  it('is available again on the next level', () => {
+    const used = run(withScore(), { type: 'hint' }, ...submitWord('steel', 2_000), {
+      type: 'nextLevel',
+      now: 3_000,
+    }).state;
+    expect(reduce(used, { type: 'hint' }).events).toEqual([
+      { type: 'hintShown', tileId: 5, cost: 100 }, // PLANET starts with P, tile 5
+    ]);
+  });
+
+  it('only works while playing with an empty tray', () => {
+    const typing = run(withScore(), ...type('se')).state;
+    expect(reduce(typing, { type: 'hint' }).state).toBe(typing);
+    const fresh = newGame(puzzle);
+    expect(reduce(fresh, { type: 'hint' }).state).toBe(fresh);
   });
 });

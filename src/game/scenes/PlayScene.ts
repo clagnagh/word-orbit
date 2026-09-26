@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { tuning } from '../../config/tuning.ts';
 import {
   currentLevel,
+  goalProgress,
+  levelGoal,
   newGame,
   reduce,
   summarize,
@@ -78,6 +80,7 @@ export class PlayScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
+  private goalText!: Phaser.GameObjects.Text;
   private messageText!: Phaser.GameObjects.Text;
   private messageTimer?: Phaser.Time.TimerEvent;
   private trayHold?: Phaser.Time.TimerEvent;
@@ -175,6 +178,14 @@ export class PlayScene extends Phaser.Scene {
     this.levelText = value(left, 0);
     this.scoreText = value(layout.width / 2, 0.5);
     this.timerText = value(right, 1);
+    this.goalText = this.add
+      .text(layout.width / 2, tuning.goal.y, '', {
+        fontFamily: fonts.family,
+        fontSize: `${tuning.goal.fontSize}px`,
+        color: toCss(palette.dimText),
+      })
+      .setOrigin(0.5)
+      .setLetterSpacing(fonts.labelLetterSpacing);
     this.comboText = this.add
       .text(layout.width / 2, layout.comboY, '', {
         fontFamily: fonts.family,
@@ -195,7 +206,7 @@ export class PlayScene extends Phaser.Scene {
       keyWord: false,
     };
     const { state, events } = reduce(prev, action);
-    if (state === prev) return;
+    if (state === prev && events.length === 0) return;
     before.keyWord = events.some((e) => e.type === 'keyWordFound');
     this.state = state;
     for (const event of events) this.onGameEvent(event, before);
@@ -242,6 +253,14 @@ export class PlayScene extends Phaser.Scene {
       const position = state.tray.indexOf(id);
       tile.setOrder(position === -1 ? null : position + 1);
     });
+
+    const goal = levelGoal(level);
+    const goalDone = state.progress[state.levelIndex]?.goalDone ?? false;
+    this.goalText
+      .setText(
+        `GOAL: ${goal.count} × ${goal.length}-LETTER WORDS  ${goalDone ? '✓' : `${goalProgress(state)}/${goal.count}`}`,
+      )
+      .setColor(toCss(goalDone ? palette.good : palette.dimText));
 
     const found = state.progress[state.levelIndex]?.foundWords ?? [];
     this.foundWords.update(found, level.validWords.length);
@@ -304,6 +323,23 @@ export class PlayScene extends Phaser.Scene {
         });
         break;
       }
+      case 'goalCompleted':
+        sfx.goal();
+        this.time.delayedCall(fx.intoPlanet.ms, () =>
+          floatText(this, planet.x, planet.y + planet.radius, `GOAL +${event.bonus}`, palette.good),
+        );
+        pop(this, this.goalText, fx.combo.popScale);
+        break;
+      case 'hintShown':
+        sfx.hint();
+        this.tiles[event.tileId]?.showHint();
+        if (event.cost > 0) {
+          floatText(this, planet.x, planet.y - planet.radius, `HINT −${event.cost}`, palette.bad);
+        }
+        break;
+      case 'hintUnavailable':
+        this.showMessage(tuning.hint.unavailableMessage, palette.dimText);
+        break;
       case 'wordRejected':
         sfx.wrong();
         vibrate('wrong');
@@ -480,7 +516,10 @@ export class PlayScene extends Phaser.Scene {
     if (tileId !== null) {
       this.dispatch({ type: 'tapLetter', tileId });
     } else if (distance(tap, layout.planet) <= layout.planet.radius + input.planetHitPadding) {
-      this.dispatch({ type: 'submit', now: this.time.now });
+      // Tapping the planet submits the word; with an empty tray it asks for a hint instead.
+      this.dispatch(
+        this.state.tray.length > 0 ? { type: 'submit', now: this.time.now } : { type: 'hint' },
+      );
     } else if (isInRect(tap, layout.tray)) {
       // Tap = remove last letter (on release); hold = clear the whole word.
       this.trayHold = this.time.delayedCall(input.longPressMs, () => {

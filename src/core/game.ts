@@ -3,7 +3,7 @@
 // (e.g. play a sound, burst particles). Time always arrives as `now`, never read from a clock.
 
 import { isFullWord, type Level, type Puzzle } from './puzzle.ts';
-import { LEVELS, MIN_WORD_LENGTH, SCORING } from './rules.ts';
+import { GOAL, HINT, LEVELS, MIN_WORD_LENGTH, SCORING } from './rules.ts';
 import { applyCombo, keyWordBonus, nextComboTenths, wordScore } from './scoring.ts';
 
 export type Phase = 'ready' | 'playing' | 'levelEnded' | 'over';
@@ -13,6 +13,8 @@ export interface LevelProgress {
   readonly foundWords: readonly string[];
   readonly keyWordFound: boolean;
   readonly score: number;
+  readonly goalDone: boolean;
+  readonly hintUsed: boolean;
 }
 
 export interface GameState {
@@ -38,7 +40,8 @@ export type Action =
   | { type: 'clear' }
   | { type: 'submit'; now: number }
   | { type: 'tick'; now: number }
-  | { type: 'nextLevel'; now: number };
+  | { type: 'nextLevel'; now: number }
+  | { type: 'hint' };
 
 export type GameEvent =
   | { type: 'levelStarted'; level: number }
@@ -46,14 +49,50 @@ export type GameEvent =
   | { type: 'wordRejected'; word: string; reason: RejectReason }
   | { type: 'keyWordFound'; word: string; bonus: number }
   | { type: 'levelEnded'; level: number; reason: 'keyWord' | 'timeUp' }
-  | { type: 'gameOver'; score: number };
+  | { type: 'gameOver'; score: number }
+  | { type: 'goalCompleted'; bonus: number }
+  | { type: 'hintShown'; tileId: number; cost: number }
+  | { type: 'hintUnavailable' };
 
 export interface Step {
   readonly state: GameState;
   readonly events: readonly GameEvent[];
 }
 
-const EMPTY_PROGRESS: LevelProgress = { foundWords: [], keyWordFound: false, score: 0 };
+const EMPTY_PROGRESS: LevelProgress = {
+  foundWords: [],
+  keyWordFound: false,
+  score: 0,
+  goalDone: false,
+  hintUsed: false,
+};
+
+export interface LevelGoal {
+  /** Find this many words… */
+  readonly count: number;
+  /** …of exactly this many letters. */
+  readonly length: number;
+}
+
+/**
+ * The level's mini-goal: 2 words of (letters − 1) letters. If the level doesn't have 2 of those,
+ * the next shorter length that does, so the goal is always possible.
+ */
+export function levelGoal(level: Level): LevelGoal {
+  const target = level.letters.length - GOAL.lettersBelowLevel;
+  for (let length = target; length >= MIN_WORD_LENGTH; length--) {
+    const available = level.validWords.filter((w) => w.length === length).length;
+    if (available >= GOAL.wordCount) return { count: GOAL.wordCount, length };
+  }
+  return { count: 1, length: MIN_WORD_LENGTH };
+}
+
+/** How many of the goal's words have been found on the current level. */
+export function goalProgress(state: GameState): number {
+  const goal = levelGoal(currentLevel(state));
+  const found = state.progress[state.levelIndex]?.foundWords ?? [];
+  return Math.min(goal.count, found.filter((w) => w.length === goal.length).length);
+}
 
 export function newGame(puzzle: Puzzle): GameState {
   return {
@@ -114,6 +153,9 @@ export function reduce(state: GameState, action: Action): Step {
     case 'tick':
       return advanceTime(state, action.now);
 
+    case 'hint':
+      return useHint(state);
+
     case 'submit': {
       const timed = advanceTime(state, action.now);
       if (timed.state.phase !== 'playing' || timed.state.tray.length === 0) return timed;
@@ -121,6 +163,24 @@ export function reduce(state: GameState, action: Action): Step {
       return { state: judged.state, events: [...timed.events, ...judged.events] };
     }
   }
+}
+
+function useHint(state: GameState): Step {
+  if (state.phase !== 'playing' || state.tray.length > 0) return unchanged(state);
+  const progress = state.progress[state.levelIndex] ?? EMPTY_PROGRESS;
+  if (progress.hintUsed) return { state, events: [{ type: 'hintUnavailable' }] };
+  const level = currentLevel(state);
+  const tileId = level.letters.indexOf(level.keyWord[0] ?? '');
+  // The hint costs points, but never takes the total score below 0.
+  const cost = Math.min(HINT.cost, totalScore(state));
+  const updated: LevelProgress = { ...progress, hintUsed: true, score: progress.score - cost };
+  return {
+    state: {
+      ...state,
+      progress: state.progress.map((p, i) => (i === state.levelIndex ? updated : p)),
+    },
+    events: [{ type: 'hintShown', tileId, cost }],
+  };
 }
 
 function unchanged(state: GameState): Step {
@@ -209,10 +269,17 @@ function judgeWord(state: GameState, now: number): Step {
   const isKey = isFullWord(level, word);
   const bonus = isKey ? keyWordBonus(state.levelIndex + 1, state.remainingMs) : 0;
 
+  const foundWords = [...progress.foundWords, word];
+  const goal = levelGoal(level);
+  const goalNowDone =
+    !progress.goalDone && foundWords.filter((w) => w.length === goal.length).length >= goal.count;
+  const goalBonus = goalNowDone ? GOAL.bonusPerLevel * (state.levelIndex + 1) : 0;
   const updated: LevelProgress = {
-    foundWords: [...progress.foundWords, word],
+    ...progress,
+    foundWords,
     keyWordFound: progress.keyWordFound || isKey,
-    score: progress.score + points + bonus,
+    goalDone: progress.goalDone || goalNowDone,
+    score: progress.score + points + bonus + goalBonus,
   };
   const next: GameState = {
     ...state,
@@ -222,6 +289,7 @@ function judgeWord(state: GameState, now: number): Step {
     progress: state.progress.map((p, i) => (i === state.levelIndex ? updated : p)),
   };
   const events: GameEvent[] = [{ type: 'wordAccepted', word, points, comboTenths }];
+  if (goalNowDone) events.push({ type: 'goalCompleted', bonus: goalBonus });
   if (!isKey) return { state: next, events };
 
   events.push({ type: 'keyWordFound', word, bonus });

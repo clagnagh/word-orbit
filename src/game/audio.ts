@@ -101,4 +101,6 @@ export const sfx = {
   levelStart: () => play(audio.recipes.whoosh),
   tick: (high: boolean) => play(high ? audio.recipes.tick : audio.recipes.tock),
   gameOver: () => phrase(audio.gameOverNotes, audio.gameOverGapMs),
+  goal: () => phrase(tuning.goal.notes, tuning.goal.gapMs),
+  hint: () => play(audio.recipes.comboBlip),
 };
