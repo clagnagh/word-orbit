@@ -97,7 +97,7 @@ An original, calm, space-themed style: a dark gradient background, soft glowing 
 | Tests                | Vitest (core logic only)                                                                                                                                                                                                                                   |
 | Lint/format          | ESLint + Prettier, with `no-restricted-imports` blocking `phaser` inside `src/core/**` (plus `no-restricted-globals` for browser globals, and bans on `Date.now` / `Math.random`)                                                                          |
 | Sound                | zzfx (tiny sound synthesizer, no audio files needed). _Ask me before installing._                                                                                                                                                                          |
-| Debug tweaking       | lil-gui, loaded only in dev mode. _Ask me before installing._                                                                                                                                                                                              |
+| Debug tweaking       | lil-gui, loaded only in dev mode. _Ask me before installing._ **Approved in Milestone 5 (dev dependency).**                                                                                                                                                |
 | Word list            | An open-licensed English word list, such as ENABLE. **Before using any list, stop and tell me: its licence, where to download it, and how you'll filter it.** Keep only lowercase a–z words of 3–7 letters. **Approved: ENABLE (public domain).**          |
 | Key-word list        | A separate, curated list of common, family-friendly 5/6/7-letter words. Offensive words are filtered out of _both_ lists. **Approved: SCOWL sizes 10–20 ∩ ENABLE, minus inflections; LDNOOBW + `scripts/blocklist.txt` filter. Licences in `CREDITS.md`.** |
 | Node types           | `@types/node` (dev only) so `scripts/` can be typechecked. Approved in Milestone 1.                                                                                                                                                                        |
@@ -232,15 +232,15 @@ Make it work before making it pretty. Use plain circles and rectangles only.
 
 Juice means small effects that make actions feel satisfying.
 
-- [ ] Build `fx/` helpers: `pop(target)`, `shake(camera, intensity, ms)`, `burst(x, y, colour)` (particles), `floatText(x, y, "+250")`, and `flash(colour)`.
-- [ ] Tap a letter: the tile pops, and a "ghost" copy flies into the tray.
-- [ ] Valid word: tray letters fly into the planet, a particle burst plays, and the score floats upward.
-- [ ] Wrong word: the tray shakes and flashes red. The camera shakes for 100 ms (intensity set in tuning).
-- [ ] Key word: a big moment — slow motion, a ring shockwave, then tiles spiral into the planet.
-- [ ] Combo: the multiplier text grows and glows as the combo climbs.
-- [ ] Level transition: tiles fly out, the next orbit flies in, and speed visibly increases.
-- [ ] **Dev debug panel** (lil-gui, dev builds only) for adjusting any `tuning.ts` value live. Press the backtick (`) key to toggle it.
-- [ ] Respect `prefers-reduced-motion`: turn off shake and big motion, and keep only colour feedback.
+- [x] Build `fx/` helpers: `pop(target)`, `shake(camera, intensity, ms)`, `burst(x, y, colour)` (particles), `floatText(x, y, "+250")`, and `flash(colour)`.
+- [x] Tap a letter: the tile pops, and a "ghost" copy flies into the tray.
+- [x] Valid word: tray letters fly into the planet, a particle burst plays, and the score floats upward.
+- [x] Wrong word: the tray shakes and flashes red. The camera shakes for 100 ms (intensity set in tuning).
+- [x] Key word: a big moment — slow motion, a ring shockwave, then tiles spiral into the planet.
+- [x] Combo: the multiplier text grows and glows as the combo climbs.
+- [x] Level transition: tiles fly out, the next orbit flies in, and speed visibly increases.
+- [x] **Dev debug panel** (lil-gui, dev builds only) for adjusting any `tuning.ts` value live. Press the backtick (`) key to toggle it.
+- [x] Respect `prefers-reduced-motion`: turn off shake and big motion, and keep only colour feedback.
 
 **Done when:** I say it "feels good" after playing on desktop and phone.
 **Explain to me:** tweens and easing curves, particle emitters, and why the debug panel speeds up tuning.
