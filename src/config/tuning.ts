@@ -143,6 +143,23 @@ export const tuning = {
   /** hitSize is the invisible tap area: bigger than the drawn button so it's easy to hit (≥ 48 px on a phone). */
   muteButton: { x: 668, y: 1228, radius: 30, hitSize: 100, iconSize: 14, lineWidth: 4 },
 
+  /** The mini-goal line under the combo, and the hint glow. (Rule numbers are in core/rules.ts.) */
+  goal: {
+    y: 212,
+    fontSize: 22,
+    /** Goal-complete sound: a quick rise of these semitones above the note recipe. */
+    notes: [0, 7, 12],
+    gapMs: 60,
+  },
+  hint: {
+    glowMs: 3_000,
+    ringWidth: 6,
+    /** How far the glow ring sits outside the tile's edge. */
+    ringGap: 6,
+    pulseMs: 400,
+    unavailableMessage: 'Hint already used',
+  },
+
   /** Juice: the small effects that make actions feel good. Durations are in ms. */
   fx: {
     /** Tapped tile grows, then springs back. */

@@ -26,3 +26,16 @@ export const SCORING = {
   comboStepTenths: 1,
   comboMaxTenths: 20,
 } as const;
+
+/** Each level's mini-goal: find `wordCount` words of (letters − lettersBelowLevel) letters. */
+export const GOAL = {
+  wordCount: 2,
+  lettersBelowLevel: 1,
+  /** Bonus is this × level number, awarded once. */
+  bonusPerLevel: 300,
+} as const;
+
+/** One hint per level: reveals the key word's first letter, for a cost. */
+export const HINT = {
+  cost: 100,
+} as const;
