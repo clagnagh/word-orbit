@@ -35,6 +35,8 @@ Run `npm test` and `npm run typecheck` after every task.
 - **Look and feel.** Colours come from `tuning.palette` (0xRRGGBB numbers; convert with `toCss()` from `src/game/color.ts` for text). Text uses `tuning.fonts.family` (Fredoka, bundled in `public/fonts/` and loaded before Phaser starts in `main.ts`).
 - **Effects ("juice")** live in `src/game/fx/` and read their numbers from `tuning.fx`. Every effect must respect `reducedMotion()` (`src/game/motion.ts`): no shakes, pops, flying letters, particles or spirals, and no star drift; colour flashes and fading text stay.
 - **Dev tuning panel:** in `npm run dev`, press `to open lil-gui sliders for every`tuning.ts`value. It is dev-only and excluded from production builds. Changes aren't saved; copy good values into`tuning.ts`.
+- **Sound** goes through `sfx` in `src/game/audio.ts`; recipes (zzfx number lists) and timings live in `tuning.audio`. zzfx is loaded on the first tap or key press (browsers block audio before that), and sounds asked for while it loads are queued. Phaser's own audio is disabled (`audio.noAudio`). Mute is saved via `src/storage.ts`.
+- **Saved data** always goes through `src/storage.ts` (never `localStorage` directly), so blocked or full storage can't crash the game.
 - **Portrait design size** is 720×1280 with `Phaser.Scale.FIT`.
 - **Keyboard input uses `window` `keydown` listeners**, removed on scene `SHUTDOWN`. Don't use Phaser's keyboard plugin for typing: its queue replayed earlier keys in frames with pointer input, adding duplicate letters.
 - **Tap detection** uses the pure helpers in `src/game/hitTest.ts` (nearest tile within an enlarged radius), not per-object Phaser hit areas.

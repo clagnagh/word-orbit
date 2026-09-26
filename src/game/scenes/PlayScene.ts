@@ -15,6 +15,7 @@ import {
 import type { Puzzle } from '../../core/puzzle.ts';
 import { LEVELS, MIN_WORD_LENGTH, SCORING } from '../../core/rules.ts';
 import { secondsLeft } from '../../core/scoring.ts';
+import { sfx } from '../audio.ts';
 import { toCss } from '../color.ts';
 import { burst } from '../fx/burst.ts';
 import { flash } from '../fx/flash.ts';
@@ -24,10 +25,12 @@ import { pop } from '../fx/pop.ts';
 import { shake, wiggle } from '../fx/shake.ts';
 import { shockwave } from '../fx/shockwave.ts';
 import { distance, isInRect, orbitPositions, pickTile, type Point } from '../hitTest.ts';
+import { vibrate } from '../haptics.ts';
 import { reducedMotion } from '../motion.ts';
 import { Background } from '../objects/Background.ts';
 import { FoundWords } from '../objects/FoundWords.ts';
 import { LetterTile } from '../objects/LetterTile.ts';
+import { MuteButton } from '../objects/MuteButton.ts';
 import { Planet } from '../objects/Planet.ts';
 import { TimerRing, timerColor } from '../objects/TimerRing.ts';
 import { Tray } from '../objects/Tray.ts';
@@ -51,6 +54,8 @@ const REJECT_MESSAGES: Record<RejectReason, string> = {
 interface Before {
   word: string;
   letterPositions: Point[];
+  /** True when this action found the key word (so the key-word sound replaces the word chime). */
+  keyWord: boolean;
 }
 
 export class PlayScene extends Phaser.Scene {
@@ -63,7 +68,7 @@ export class PlayScene extends Phaser.Scene {
   /** Each tile's current distance from the planet; animated when tiles fly in, out or spiral. */
   private tileRadii: number[] = [];
   private slowMoElapsed: number | null = null;
-  private shown = { comboTenths: 0, score: 0, timerColor: -1 };
+  private shown = { comboTenths: 0, score: 0, timerColor: -1, seconds: -1 };
   private background!: Background;
   private planet!: Planet;
   private timerRing!: TimerRing;
@@ -89,7 +94,7 @@ export class PlayScene extends Phaser.Scene {
     this.tiles = [];
     this.tileRadii = [];
     this.slowMoElapsed = null;
-    this.shown = { comboTenths: 0, score: 0, timerColor: -1 };
+    this.shown = { comboTenths: 0, score: 0, timerColor: -1, seconds: -1 };
     this.trayHold = undefined;
   }
 
@@ -100,6 +105,7 @@ export class PlayScene extends Phaser.Scene {
     this.planet = new Planet(this, layout.planet.x, layout.planet.y, layout.planet.radius, true);
     this.tray = new Tray(this);
     this.foundWords = new FoundWords(this);
+    new MuteButton(this);
     this.createHud();
 
     this.messageText = this.add
@@ -186,9 +192,11 @@ export class PlayScene extends Phaser.Scene {
     const before: Before = {
       word: trayWord(prev),
       letterPositions: action.type === 'submit' ? this.tray.letterPositions() : [],
+      keyWord: false,
     };
     const { state, events } = reduce(prev, action);
     if (state === prev) return;
+    before.keyWord = events.some((e) => e.type === 'keyWordFound');
     this.state = state;
     for (const event of events) this.onGameEvent(event, before);
     this.draw();
@@ -206,6 +214,11 @@ export class PlayScene extends Phaser.Scene {
 
     this.levelText.setText(`${state.levelIndex + 1}/${state.puzzle.levels.length}`);
     this.timerText.setText(String(seconds));
+    if (seconds !== this.shown.seconds) {
+      this.shown.seconds = seconds;
+      const ticking = seconds > 0 && seconds <= tuning.audio.tickFromSec;
+      if (ticking && state.phase === 'playing') sfx.tick(seconds % 2 === 0);
+    }
     this.timerRing.setTime(state.remainingMs / limit, seconds);
 
     // Changing a text's colour or shadow redraws it, so only do it when the value changes.
@@ -257,6 +270,7 @@ export class PlayScene extends Phaser.Scene {
     switch (event.type) {
       case 'levelStarted': {
         this.buildTiles();
+        sfx.levelStart();
         this.showMessage(`Level ${event.level}`, palette.text);
         if (event.level > 1) {
           floatText(this, planet.x, planet.y, `SPEED ×${this.speedMultiplier()}`, palette.accent);
@@ -265,6 +279,12 @@ export class PlayScene extends Phaser.Scene {
         break;
       }
       case 'wordAccepted': {
+        if (!before.keyWord) {
+          sfx.valid();
+          vibrate('valid');
+        }
+        const comboSteps = event.comboTenths - SCORING.comboStartTenths;
+        if (comboSteps > 0) sfx.comboUp(comboSteps);
         const { ms, staggerMs, endScale } = fx.intoPlanet;
         before.letterPositions.forEach((from, i) =>
           flyLetter(this, before.word[i] ?? '', {
@@ -285,6 +305,8 @@ export class PlayScene extends Phaser.Scene {
         break;
       }
       case 'wordRejected':
+        sfx.wrong();
+        vibrate('wrong');
         this.showMessage(REJECT_MESSAGES[event.reason], palette.bad);
         wiggle(this, this.tray);
         if (event.reason === 'alreadyFound') {
@@ -296,6 +318,8 @@ export class PlayScene extends Phaser.Scene {
         }
         break;
       case 'keyWordFound':
+        sfx.keyWord();
+        vibrate('keyWord');
         this.keyWordMoment(event.bonus);
         break;
       case 'levelEnded':
@@ -310,6 +334,7 @@ export class PlayScene extends Phaser.Scene {
         }
         break;
       case 'gameOver':
+        sfx.gameOver();
         this.time.delayedCall(timing.gameOverDelayMs, () => {
           const data: ResultsData = {
             puzzleNumber: this.playData.puzzleNumber,
@@ -377,6 +402,8 @@ export class PlayScene extends Phaser.Scene {
     const tile = this.tiles[tileId];
     const target = this.tray.letterPositions().at(-1);
     if (!tile || !target) return;
+    sfx.tap(this.state.tray.length - 1);
+    vibrate('tap');
     pop(this, tile);
     flyLetter(this, currentLevel(this.state).letters[tileId] ?? '', {
       from: { x: tile.x, y: tile.y },

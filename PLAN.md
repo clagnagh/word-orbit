@@ -96,7 +96,7 @@ An original, calm, space-themed style: a dark gradient background, soft glowing 
 | Bundler / dev server | Vite (vanilla-ts template)                                                                                                                                                                                                                                 |
 | Tests                | Vitest (core logic only)                                                                                                                                                                                                                                   |
 | Lint/format          | ESLint + Prettier, with `no-restricted-imports` blocking `phaser` inside `src/core/**` (plus `no-restricted-globals` for browser globals, and bans on `Date.now` / `Math.random`)                                                                          |
-| Sound                | zzfx (tiny sound synthesizer, no audio files needed). _Ask me before installing._                                                                                                                                                                          |
+| Sound                | zzfx (tiny sound synthesizer, no audio files needed). _Ask me before installing._ **Approved in Milestone 6.**                                                                                                                                             |
 | Debug tweaking       | lil-gui, loaded only in dev mode. _Ask me before installing._ **Approved in Milestone 5 (dev dependency).**                                                                                                                                                |
 | Word list            | An open-licensed English word list, such as ENABLE. **Before using any list, stop and tell me: its licence, where to download it, and how you'll filter it.** Keep only lowercase a–z words of 3–7 letters. **Approved: ENABLE (public domain).**          |
 | Key-word list        | A separate, curated list of common, family-friendly 5/6/7-letter words. Offensive words are filtered out of _both_ lists. **Approved: SCOWL sizes 10–20 ∩ ENABLE, minus inflections; LDNOOBW + `scripts/blocklist.txt` filter. Licences in `CREDITS.md`.** |
@@ -252,10 +252,10 @@ Juice means small effects that make actions feel satisfying.
 
 ### Milestone 6 — Juice, part 2: sound & haptics
 
-- [ ] `audio.ts`: sounds for tap (pitch rises with each letter in the word), valid word, wrong word, key word, combo up, level start, tick-tock in the last 10 s, and game over.
-- [ ] Unlock audio on the first user tap (browsers block sound until then).
-- [ ] A mute toggle that is remembered between visits. Master volume goes in tuning.
-- [ ] Short vibrations on supported phones (`navigator.vibrate`), off by default when reduced motion is on.
+- [x] `audio.ts`: sounds for tap (pitch rises with each letter in the word), valid word, wrong word, key word, combo up, level start, tick-tock in the last 10 s, and game over.
+- [x] Unlock audio on the first user tap (browsers block sound until then).
+- [x] A mute toggle that is remembered between visits. Master volume goes in tuning.
+- [x] Short vibrations on supported phones (`navigator.vibrate`), off by default when reduced motion is on.
 
 **Done when:** the sounds feel good together and nothing is annoying after 5 plays.
 **Explain to me:** why browsers block audio until a user interaction, and how zzfx generates sound from numbers.

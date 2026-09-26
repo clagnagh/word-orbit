@@ -7,6 +7,7 @@ import { orbitPositions } from '../hitTest.ts';
 import { Background } from '../objects/Background.ts';
 import { createButton } from '../objects/Button.ts';
 import { LetterTile } from '../objects/LetterTile.ts';
+import { MuteButton } from '../objects/MuteButton.ts';
 import { Planet } from '../objects/Planet.ts';
 import { wordLists } from '../wordLists.ts';
 import type { PlayData } from './PlayScene.ts';
@@ -75,6 +76,7 @@ export class MenuScene extends Phaser.Scene {
       this.scene.start('Play', data);
     };
     createButton(this, cx, menu.buttonY, 'Play', play);
+    new MuteButton(this);
 
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement) return;
