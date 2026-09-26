@@ -262,11 +262,11 @@ Juice means small effects that make actions feel satisfying.
 
 ### Milestone 7 — Daily loop & sharing
 
-- [ ] Menu shows: today's puzzle number, a "Play" button (or "Played ✓" if done), and a countdown to the next puzzle.
-- [ ] Save game progress mid-play, so a reload resumes it. A completed daily shows Results instead of replaying.
-- [ ] Results screen: score, words found, and the key words revealed **only after** the game is over. Show stats too: played, streak, best score, and a small score history bar chart.
-- [ ] Share button: use the Web Share API on mobile, copy to clipboard on desktop, and show a "Copied!" toast.
-- [ ] A "How to play" overlay on first launch, which can be reopened from the menu.
+- [x] Menu shows: today's puzzle number, a "Play" button (or "Played ✓" if done), and a countdown to the next puzzle.
+- [x] Save game progress mid-play, so a reload resumes it. A completed daily shows Results instead of replaying.
+- [x] Results screen: score, words found, and the key words revealed **only after** the game is over. Show stats too: played, streak, best score, and a small score history bar chart.
+- [x] Share button: use the Web Share API on mobile, copy to clipboard on desktop, and show a "Copied!" toast.
+- [x] A "How to play" overlay on first launch, which can be reopened from the menu.
 
 **Done when:** I play two days in a row (fake the date with a dev-only `?date=2026-10-02` URL parameter) and the streak shows 🔥2.
 **Explain to me:** the Web Share API, localStorage limits, and why the date override is dev-only.

@@ -36,6 +36,7 @@ import { MuteButton } from '../objects/MuteButton.ts';
 import { Planet } from '../objects/Planet.ts';
 import { TimerRing, timerColor } from '../objects/TimerRing.ts';
 import { Tray } from '../objects/Tray.ts';
+import { recordFinishedGame, saveGame } from '../session.ts';
 import type { ResultsData } from './ResultsScene.ts';
 
 const { fonts, fx, input, layout, orbit, palette, timing } = tuning;
@@ -44,6 +45,8 @@ export interface PlayData {
   puzzleNumber: number;
   isPreview: boolean;
   puzzle: Puzzle;
+  /** A saved game to continue instead of starting fresh. */
+  resume?: GameState;
 }
 
 const REJECT_MESSAGES: Record<RejectReason, string> = {
@@ -84,6 +87,7 @@ export class PlayScene extends Phaser.Scene {
   private messageText!: Phaser.GameObjects.Text;
   private messageTimer?: Phaser.Time.TimerEvent;
   private trayHold?: Phaser.Time.TimerEvent;
+  private sinceSaveMs = 0;
 
   constructor() {
     super('Play');
@@ -91,7 +95,8 @@ export class PlayScene extends Phaser.Scene {
 
   init(data: PlayData): void {
     this.playData = data;
-    this.state = newGame(data.puzzle);
+    this.state = data.resume ?? newGame(data.puzzle);
+    this.sinceSaveMs = 0;
     this.angle = 0;
     this.spin = 0;
     this.tiles = [];
@@ -129,7 +134,61 @@ export class PlayScene extends Phaser.Scene {
       window.removeEventListener('keydown', this.onKeyDown),
     );
 
-    this.dispatch({ type: 'start', now: this.time.now });
+    // Save when the player leaves or hides the page, so a reload picks up from here.
+    const saveNow = () => this.save();
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') this.save();
+    };
+    window.addEventListener('pagehide', saveNow);
+    document.addEventListener('visibilitychange', onHide);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('pagehide', saveNow);
+      document.removeEventListener('visibilitychange', onHide);
+    });
+
+    this.beginOrResume();
+  }
+
+  /** A fresh game starts; a saved one picks up where it was left. */
+  private beginOrResume(): void {
+    const now = this.now();
+    switch (this.state.phase) {
+      case 'ready':
+        this.dispatch({ type: 'start', now });
+        break;
+      case 'playing':
+        this.buildTiles();
+        this.dispatch({ type: 'resume', now });
+        this.draw();
+        break;
+      case 'levelEnded':
+        this.dispatch({ type: 'nextLevel', now });
+        break;
+      case 'over':
+        this.goToResults();
+        break;
+    }
+  }
+
+  /** Saves today's game (not the preview puzzle, which must stay playable on launch day). */
+  private save(): void {
+    if (this.playData.isPreview) return;
+    this.sinceSaveMs = 0;
+    saveGame(this.state, this.playData.puzzleNumber);
+  }
+
+  private goToResults(): void {
+    this.save(); // the finished game, so the menu offers "See results" instead of replaying
+    const { puzzleNumber, isPreview } = this.playData;
+    const summary = summarize(this.state);
+    const data: ResultsData = {
+      puzzleNumber,
+      isPreview,
+      puzzle: this.state.puzzle,
+      summary,
+      stats: isPreview ? null : recordFinishedGame(puzzleNumber, summary.score),
+    };
+    this.scene.start('Results', data);
   }
 
   update(_time: number, delta: number): void {
@@ -139,8 +198,21 @@ export class PlayScene extends Phaser.Scene {
     }
     this.updateSlowMo(delta);
     this.background.update(delta, multiplier);
-    this.dispatch({ type: 'tick', now: this.time.now });
+    this.dispatch({ type: 'tick', now: this.now() });
+    this.sinceSaveMs += delta;
+    if (this.state.phase === 'playing' && this.sinceSaveMs >= tuning.daily.saveIntervalMs) {
+      this.save();
+    }
     this.tilePositions().forEach((p, i) => this.tiles[i]?.setPosition(p.x, p.y));
+  }
+
+  /**
+   * The time passed to the game rules. Uses the game loop's clock: the scene clock
+   * (this.time.now) holds a stale value when a scene starts, which used to take the time spent
+   * on the Menu off level 1's timer.
+   */
+  private now(): number {
+    return this.game.loop.time;
   }
 
   private speedMultiplier(): number {
@@ -211,6 +283,8 @@ export class PlayScene extends Phaser.Scene {
     this.state = state;
     for (const event of events) this.onGameEvent(event, before);
     this.draw();
+    // Anything other than the clock ticking is worth saving straight away.
+    if (action.type !== 'tick' && state !== prev) this.save();
 
     const added =
       state.tray.length === prev.tray.length + 1 && state.levelIndex === prev.levelIndex;
@@ -365,21 +439,13 @@ export class PlayScene extends Phaser.Scene {
         }
         if (event.level < this.state.puzzle.levels.length) {
           this.time.delayedCall(timing.levelTransitionMs, () =>
-            this.dispatch({ type: 'nextLevel', now: this.time.now }),
+            this.dispatch({ type: 'nextLevel', now: this.now() }),
           );
         }
         break;
       case 'gameOver':
         sfx.gameOver();
-        this.time.delayedCall(timing.gameOverDelayMs, () => {
-          const data: ResultsData = {
-            puzzleNumber: this.playData.puzzleNumber,
-            isPreview: this.playData.isPreview,
-            puzzle: this.state.puzzle,
-            summary: summarize(this.state),
-          };
-          this.scene.start('Results', data);
-        });
+        this.time.delayedCall(timing.gameOverDelayMs, () => this.goToResults());
         break;
     }
   }
@@ -518,7 +584,7 @@ export class PlayScene extends Phaser.Scene {
     } else if (distance(tap, layout.planet) <= layout.planet.radius + input.planetHitPadding) {
       // Tapping the planet submits the word; with an empty tray it asks for a hint instead.
       this.dispatch(
-        this.state.tray.length > 0 ? { type: 'submit', now: this.time.now } : { type: 'hint' },
+        this.state.tray.length > 0 ? { type: 'submit', now: this.now() } : { type: 'hint' },
       );
     } else if (isInRect(tap, layout.tray)) {
       // Tap = remove last letter (on release); hold = clear the whole word.
@@ -540,7 +606,7 @@ export class PlayScene extends Phaser.Scene {
     // Keys typed into a text box (e.g. the dev tuning panel) aren't meant for the game.
     if (event.target instanceof HTMLInputElement) return;
     if (event.repeat && event.key !== 'Backspace') return;
-    if (event.key === 'Enter') this.dispatch({ type: 'submit', now: this.time.now });
+    if (event.key === 'Enter') this.dispatch({ type: 'submit', now: this.now() });
     else if (event.key === 'Backspace') this.dispatch({ type: 'removeLast' });
     else if (event.key === 'Escape') this.dispatch({ type: 'clear' });
     else if (/^[a-z]$/i.test(event.key)) this.dispatch({ type: 'typeLetter', letter: event.key });

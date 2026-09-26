@@ -37,6 +37,8 @@ Run `npm test` and `npm run typecheck` after every task.
 - **Dev tuning panel:** in `npm run dev`, press `to open lil-gui sliders for every`tuning.ts`value. It is dev-only and excluded from production builds. Changes aren't saved; copy good values into`tuning.ts`.
 - **Sound** goes through `sfx` in `src/game/audio.ts`; recipes (zzfx number lists) and timings live in `tuning.audio`. zzfx is loaded on the first tap or key press (browsers block audio before that), and sounds asked for while it loads are queued. Phaser's own audio is disabled (`audio.noAudio`). Mute is saved via `src/storage.ts`.
 - **Saved data** always goes through `src/storage.ts` (never `localStorage` directly), so blocked or full storage can't crash the game.
+- **Game time comes from `this.game.loop.time`** (PlayScene's `now()`), never `this.time.now`: the scene clock holds a stale value when a scene starts, which once took the time spent on the Menu off level 1's timer.
+- **Daily loop:** `src/game/session.ts` owns today's date, saving/loading today's game (`core/save.ts`), stats and the "seen help" flag. The preview puzzle (before launch) is never saved or counted. Test other days with `?date=2026-10-02` in `npm run dev` (or `#2026-10-02` on builds made with `VITE_DATE_OVERRIDE=1`); production builds strip the override.
 - **Portrait design size** is 720×1280 with `Phaser.Scale.FIT`.
 - **Keyboard input uses `window` `keydown` listeners**, removed on scene `SHUTDOWN`. Don't use Phaser's keyboard plugin for typing: its queue replayed earlier keys in frames with pointer input, adding duplicate letters.
 - **Tap detection** uses the pure helpers in `src/game/hitTest.ts` (nearest tile within an enlarged radius), not per-object Phaser hit areas.
