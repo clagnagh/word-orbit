@@ -93,6 +93,54 @@ export const tuning = {
     messageMs: 1_200,
   },
 
+  /** Juice: the small effects that make actions feel good. Durations are in ms. */
+  fx: {
+    /** Tapped tile grows, then springs back. */
+    pop: { scale: 1.18, upMs: 70, downMs: 140 },
+    /** The score pops a little each time it goes up. */
+    scorePopScale: 1.12,
+    /** Copy of a tapped letter flying into its tray slot. */
+    ghost: { ms: 200, endScale: 0.6 },
+    /** Tray letters flying into the planet after a valid word. */
+    intoPlanet: { ms: 260, staggerMs: 30, endScale: 0.3 },
+    burst: {
+      /** Word bursts use palette.star so they show up against the teal planet. */
+      count: 18,
+      keyWordCount: 40,
+      speedMin: 120,
+      speedMax: 320,
+      lifespanMs: 700,
+      particleRadius: 6,
+    },
+    /** Floating text gets a dark outline so it reads over the planet and tiles. */
+    floatText: { rise: 90, ms: 800, keyWordFontSize: 52, keyWordMs: 1_400, outlineWidth: 8 },
+    trayShake: { distance: 14, swings: 4, ms: 260 },
+    trayFlashMs: 220,
+    cameraShake: { ms: 100, intensity: 0.006 },
+    /** An already-found word's pill pops and turns amber for highlightMs. */
+    pillPulse: { scale: 1.2, highlightMs: 540 },
+    keyWord: {
+      /** Everything animates at this fraction of normal speed, easing back to 1 over slowMs. */
+      slowScale: 0.35,
+      slowMs: 350,
+      flashAlpha: 0.25,
+      flashMs: 150,
+      shockwaveRadius: 700,
+      shockwaveMs: 700,
+      shockwaveWidth: 6,
+      spiralTurns: 1,
+      spiralMs: 900,
+      /** Tiles shrink to this size as they spiral in. */
+      spiralEndScale: 0.3,
+    },
+    /** glowPadding must be at least glowPerStep × 10 so the glow isn't clipped into a box. */
+    combo: { growPerStep: 0.05, popScale: 1.3, glowPerStep: 3, glowPadding: 32 },
+    flyOut: { radius: 700, ms: 500 },
+    flyIn: { fromRadius: 700, ms: 600, staggerMs: 60 },
+    /** Stars briefly rush past when a faster level starts. */
+    starSurge: { multiplier: 4, ms: 900 },
+  },
+
   background: {
     /** Star layers, far to near. Drift speed (px/s) is multiplied by the level's orbit speed. */
     starLayers: [

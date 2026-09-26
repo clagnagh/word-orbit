@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { tuning } from '../../config/tuning.ts';
 import { toCss } from '../color.ts';
+import { pop } from '../fx/pop.ts';
 
 const { fonts, layout, palette } = tuning;
 const area = layout.foundWords;
@@ -10,6 +11,7 @@ export class FoundWords {
   private readonly header: Phaser.GameObjects.Text;
   private readonly pills: Phaser.GameObjects.Container;
   private readonly scene: Phaser.Scene;
+  private readonly pillByWord = new Map<string, Phaser.GameObjects.Container>();
   private shownKey = '';
 
   constructor(scene: Phaser.Scene) {
@@ -33,6 +35,7 @@ export class FoundWords {
     const left = totalWords - words.length;
     this.header.setText(`FOUND ${words.length}  ·  ${left} TO FIND`);
     this.pills.removeAll(true);
+    this.pillByWord.clear();
 
     const rows: Phaser.GameObjects.Container[][] = [[]];
     const rowWidths = [0];
@@ -79,7 +82,22 @@ export class FoundWords {
       .fillStyle(palette.panel, 1)
       .fillRoundedRect(-width / 2, -h / 2, width, h, h / 2);
     const pill = this.scene.add.container(0, 0, [bg, text]).setSize(width, h);
+    this.pillByWord.set(word, pill);
     this.pills.add(pill);
     return pill;
+  }
+
+  /** Draw the eye to a word that's already been found. */
+  pulse(word: string): void {
+    const pill = this.pillByWord.get(word);
+    if (!pill) return;
+    const text = pill.list.find(
+      (o): o is Phaser.GameObjects.Text => o instanceof Phaser.GameObjects.Text,
+    );
+    text?.setColor(toCss(palette.accent));
+    pop(this.scene, pill, tuning.fx.pillPulse.scale);
+    this.scene.time.delayedCall(tuning.fx.pillPulse.highlightMs, () =>
+      text?.setColor(toCss(palette.text)),
+    );
   }
 }

@@ -33,6 +33,8 @@ Run `npm test` and `npm run typecheck` after every task.
 - **Rules vs feel.** Game-rule numbers (timers, points, combo) live in `src/core/rules.ts`.
 - **Tuning file.** Every feel number (speeds, durations, sizes, colours, shake strength) lives in `src/config/tuning.ts`. Scenes never hard-code them. Try to meet feel requests by changing tuning values first, and say which values changed and why.
 - **Look and feel.** Colours come from `tuning.palette` (0xRRGGBB numbers; convert with `toCss()` from `src/game/color.ts` for text). Text uses `tuning.fonts.family` (Fredoka, bundled in `public/fonts/` and loaded before Phaser starts in `main.ts`).
+- **Effects ("juice")** live in `src/game/fx/` and read their numbers from `tuning.fx`. Every effect must respect `reducedMotion()` (`src/game/motion.ts`): no shakes, pops, flying letters, particles or spirals, and no star drift; colour flashes and fading text stay.
+- **Dev tuning panel:** in `npm run dev`, press `to open lil-gui sliders for every`tuning.ts`value. It is dev-only and excluded from production builds. Changes aren't saved; copy good values into`tuning.ts`.
 - **Portrait design size** is 720×1280 with `Phaser.Scale.FIT`.
 - **Keyboard input uses `window` `keydown` listeners**, removed on scene `SHUTDOWN`. Don't use Phaser's keyboard plugin for typing: its queue replayed earlier keys in frames with pointer input, adding duplicate letters.
 - **Tap detection** uses the pure helpers in `src/game/hitTest.ts` (nearest tile within an enlarged radius), not per-object Phaser hit areas.

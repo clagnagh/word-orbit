@@ -18,8 +18,12 @@ function startGame(): void {
     scene: [MenuScene, PlayScene, ResultsScene],
   });
 
-  // Dev builds only: lets browser tests and the console inspect the running game.
-  if (import.meta.env.DEV) Object.assign(window, { wordOrbit: game });
+  // Dev builds only: the tuning panel, and a handle for browser tests and the console.
+  // Production builds drop this block, and lil-gui with it.
+  if (import.meta.env.DEV) {
+    Object.assign(window, { wordOrbit: game });
+    void import('./game/debugPanel.ts').then((panel) => panel.installDebugPanel(game));
+  }
 }
 
 // Phaser draws text once onto a canvas, so the font must be ready before the first scene.

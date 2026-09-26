@@ -16,7 +16,15 @@ import type { Puzzle } from '../../core/puzzle.ts';
 import { LEVELS, MIN_WORD_LENGTH, SCORING } from '../../core/rules.ts';
 import { secondsLeft } from '../../core/scoring.ts';
 import { toCss } from '../color.ts';
+import { burst } from '../fx/burst.ts';
+import { flash } from '../fx/flash.ts';
+import { floatText } from '../fx/floatText.ts';
+import { flyLetter } from '../fx/flyTo.ts';
+import { pop } from '../fx/pop.ts';
+import { shake, wiggle } from '../fx/shake.ts';
+import { shockwave } from '../fx/shockwave.ts';
 import { distance, isInRect, orbitPositions, pickTile, type Point } from '../hitTest.ts';
+import { reducedMotion } from '../motion.ts';
 import { Background } from '../objects/Background.ts';
 import { FoundWords } from '../objects/FoundWords.ts';
 import { LetterTile } from '../objects/LetterTile.ts';
@@ -25,7 +33,7 @@ import { TimerRing, timerColor } from '../objects/TimerRing.ts';
 import { Tray } from '../objects/Tray.ts';
 import type { ResultsData } from './ResultsScene.ts';
 
-const { fonts, input, layout, orbit, palette, timing } = tuning;
+const { fonts, fx, input, layout, orbit, palette, timing } = tuning;
 
 export interface PlayData {
   puzzleNumber: number;
@@ -39,11 +47,23 @@ const REJECT_MESSAGES: Record<RejectReason, string> = {
   alreadyFound: 'Already found',
 };
 
+/** What the tray showed just before an action, so effects can start from there. */
+interface Before {
+  word: string;
+  letterPositions: Point[];
+}
+
 export class PlayScene extends Phaser.Scene {
   private playData!: PlayData;
   private state!: GameState;
   private angle = 0;
+  /** Extra rotation, used by the key-word spiral. */
+  private spin = 0;
   private tiles: LetterTile[] = [];
+  /** Each tile's current distance from the planet; animated when tiles fly in, out or spiral. */
+  private tileRadii: number[] = [];
+  private slowMoElapsed: number | null = null;
+  private shown = { comboTenths: 0, score: 0, timerColor: -1 };
   private background!: Background;
   private planet!: Planet;
   private timerRing!: TimerRing;
@@ -65,11 +85,16 @@ export class PlayScene extends Phaser.Scene {
     this.playData = data;
     this.state = newGame(data.puzzle);
     this.angle = 0;
+    this.spin = 0;
     this.tiles = [];
+    this.tileRadii = [];
+    this.slowMoElapsed = null;
+    this.shown = { comboTenths: 0, score: 0, timerColor: -1 };
     this.trayHold = undefined;
   }
 
   create(): void {
+    this.tweens.timeScale = 1;
     this.background = new Background(this);
     this.timerRing = new TimerRing(this);
     this.planet = new Planet(this, layout.planet.x, layout.planet.y, layout.planet.radius, true);
@@ -99,13 +124,18 @@ export class PlayScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    const multiplier = orbit.levelSpeedMultipliers[this.state.levelIndex] ?? 1;
+    const multiplier = this.speedMultiplier();
     if (this.state.phase === 'playing') {
       this.angle += orbit.baseSpeed * multiplier * (delta / 1000);
     }
+    this.updateSlowMo(delta);
     this.background.update(delta, multiplier);
     this.dispatch({ type: 'tick', now: this.time.now });
     this.tilePositions().forEach((p, i) => this.tiles[i]?.setPosition(p.x, p.y));
+  }
+
+  private speedMultiplier(): number {
+    return orbit.levelSpeedMultipliers[this.state.levelIndex] ?? 1;
   }
 
   private createHud(): void {
@@ -146,16 +176,26 @@ export class PlayScene extends Phaser.Scene {
         fontStyle: fonts.bold,
         color: toCss(palette.accent),
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setPadding(fx.combo.glowPadding);
   }
 
   /** The one way the scene changes the game: send an action, draw the new state, react to events. */
   private dispatch(action: Action): void {
-    const { state, events } = reduce(this.state, action);
-    if (state === this.state) return;
+    const prev = this.state;
+    const before: Before = {
+      word: trayWord(prev),
+      letterPositions: action.type === 'submit' ? this.tray.letterPositions() : [],
+    };
+    const { state, events } = reduce(prev, action);
+    if (state === prev) return;
     this.state = state;
-    for (const event of events) this.onGameEvent(event);
+    for (const event of events) this.onGameEvent(event, before);
     this.draw();
+
+    const added =
+      state.tray.length === prev.tray.length + 1 && state.levelIndex === prev.levelIndex;
+    if (added) this.onTileAdded(state.tray[state.tray.length - 1]!);
   }
 
   private draw(): void {
@@ -165,18 +205,22 @@ export class PlayScene extends Phaser.Scene {
     const seconds = secondsLeft(state.remainingMs);
 
     this.levelText.setText(`${state.levelIndex + 1}/${state.puzzle.levels.length}`);
-    this.scoreText.setText(totalScore(state).toLocaleString('en-US'));
-    this.timerText
-      .setText(String(seconds))
-      .setColor(
-        toCss(seconds < tuning.timerRing.warnBelowSec ? timerColor(seconds) : palette.text),
-      );
+    this.timerText.setText(String(seconds));
     this.timerRing.setTime(state.remainingMs / limit, seconds);
-    this.comboText.setText(
-      state.comboTenths > SCORING.comboStartTenths
-        ? `COMBO ×${(state.comboTenths / 10).toFixed(1)}`
-        : '',
-    );
+
+    // Changing a text's colour or shadow redraws it, so only do it when the value changes.
+    const color = seconds < tuning.timerRing.warnBelowSec ? timerColor(seconds) : palette.text;
+    if (color !== this.shown.timerColor) {
+      this.shown.timerColor = color;
+      this.timerText.setColor(toCss(color));
+    }
+    const score = totalScore(state);
+    if (score !== this.shown.score) {
+      if (score > this.shown.score) pop(this, this.scoreText, fx.scorePopScale);
+      this.shown.score = score;
+      this.scoreText.setText(score.toLocaleString('en-US'));
+    }
+    if (state.comboTenths !== this.shown.comboTenths) this.drawCombo(state.comboTenths);
 
     const word = trayWord(state);
     this.tray.setWord(word);
@@ -190,23 +234,75 @@ export class PlayScene extends Phaser.Scene {
     this.foundWords.update(found, level.validWords.length);
   }
 
-  private onGameEvent(event: GameEvent): void {
+  /** The combo grows and glows as it climbs, and pops each time it goes up. */
+  private drawCombo(tenths: number): void {
+    const rising = tenths > this.shown.comboTenths;
+    this.shown.comboTenths = tenths;
+    const steps = tenths - SCORING.comboStartTenths;
+    if (steps <= 0) {
+      this.tweens.killTweensOf(this.comboText);
+      this.comboText.setText('').setScale(1);
+      return;
+    }
+    const restScale = 1 + steps * fx.combo.growPerStep;
+    this.comboText
+      .setText(`COMBO ×${(tenths / 10).toFixed(1)}`)
+      .setShadow(0, 0, toCss(palette.accent), steps * fx.combo.glowPerStep, false, true)
+      .setScale(restScale);
+    if (rising) pop(this, this.comboText, fx.combo.popScale, restScale);
+  }
+
+  private onGameEvent(event: GameEvent, before: Before): void {
+    const { planet } = layout;
     switch (event.type) {
-      case 'levelStarted':
+      case 'levelStarted': {
         this.buildTiles();
         this.showMessage(`Level ${event.level}`, palette.text);
+        if (event.level > 1) {
+          floatText(this, planet.x, planet.y, `SPEED ×${this.speedMultiplier()}`, palette.accent);
+          this.background.surge(fx.starSurge.multiplier, fx.starSurge.ms);
+        }
         break;
-      case 'wordAccepted':
-        this.showMessage(`+${event.points}`, palette.good);
+      }
+      case 'wordAccepted': {
+        const { ms, staggerMs, endScale } = fx.intoPlanet;
+        before.letterPositions.forEach((from, i) =>
+          flyLetter(this, before.word[i] ?? '', {
+            from,
+            to: planet,
+            ms,
+            delayMs: i * staggerMs,
+            endScale,
+            ease: 'Cubic.In',
+            fontSize: fonts.tray,
+          }),
+        );
+        const arriveMs = reducedMotion() ? 0 : ms + staggerMs * (before.letterPositions.length - 1);
+        this.time.delayedCall(arriveMs, () => {
+          burst(this, planet.x, planet.y, palette.star, fx.burst.count, planet.radius);
+          floatText(this, planet.x, planet.y - planet.radius, `+${event.points}`, palette.good);
+        });
         break;
+      }
       case 'wordRejected':
         this.showMessage(REJECT_MESSAGES[event.reason], palette.bad);
+        wiggle(this, this.tray);
+        if (event.reason === 'alreadyFound') {
+          this.tray.flashBorder(palette.accent, fx.trayFlashMs);
+          this.foundWords.pulse(event.word);
+        } else {
+          this.tray.flashBorder(palette.bad, fx.trayFlashMs);
+          if (event.reason === 'notAWord') shake(this.cameras.main);
+        }
         break;
       case 'keyWordFound':
-        this.showMessage(`Key word! +${event.bonus} bonus`, palette.accent);
+        this.keyWordMoment(event.bonus);
         break;
       case 'levelEnded':
-        if (event.reason === 'timeUp') this.showMessage("Time's up!", palette.bad);
+        if (event.reason === 'timeUp') {
+          this.showMessage("Time's up!", palette.bad);
+          this.flyTilesOut();
+        }
         if (event.level < this.state.puzzle.levels.length) {
           this.time.delayedCall(timing.levelTransitionMs, () =>
             this.dispatch({ type: 'nextLevel', now: this.time.now }),
@@ -227,17 +323,122 @@ export class PlayScene extends Phaser.Scene {
     }
   }
 
+  /** The big moment: slow motion, a flash, a shockwave, then the tiles spiral into the planet. */
+  private keyWordMoment(bonus: number): void {
+    const { planet } = layout;
+    const k = fx.keyWord;
+    if (!reducedMotion()) {
+      this.slowMoElapsed = 0;
+      this.tweens.timeScale = k.slowScale;
+    }
+    flash(this, palette.text);
+    shockwave(this, planet.x, planet.y, palette.accent, planet.radius);
+    burst(this, planet.x, planet.y, palette.accent, fx.burst.keyWordCount, planet.radius);
+    floatText(
+      this,
+      planet.x,
+      planet.y,
+      `KEY WORD +${bonus.toLocaleString('en-US')}`,
+      palette.accent,
+      fx.floatText.keyWordFontSize,
+      fx.floatText.keyWordMs,
+    );
+
+    const startRadii = [...this.tileRadii];
+    if (reducedMotion()) {
+      this.tweens.add({ targets: this.tiles, alpha: 0, duration: k.spiralMs });
+      return;
+    }
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: k.spiralMs,
+      ease: 'Cubic.In',
+      onUpdate: (tween) => {
+        const t = tween.getValue() ?? 0;
+        this.spin = t * k.spiralTurns * Math.PI * 2;
+        this.tileRadii = startRadii.map((r) => r * (1 - t));
+        for (const tile of this.tiles)
+          tile.setAlpha(1 - t).setScale(1 - t * (1 - k.spiralEndScale));
+      },
+    });
+  }
+
+  private updateSlowMo(delta: number): void {
+    if (this.slowMoElapsed === null) return;
+    this.slowMoElapsed += delta;
+    const { slowScale, slowMs } = fx.keyWord;
+    const t = Math.min(1, this.slowMoElapsed / slowMs);
+    this.tweens.timeScale = slowScale + (1 - slowScale) * t * t;
+    if (t >= 1) this.slowMoElapsed = null;
+  }
+
+  private onTileAdded(tileId: number): void {
+    const tile = this.tiles[tileId];
+    const target = this.tray.letterPositions().at(-1);
+    if (!tile || !target) return;
+    pop(this, tile);
+    flyLetter(this, currentLevel(this.state).letters[tileId] ?? '', {
+      from: { x: tile.x, y: tile.y },
+      to: target,
+      ms: fx.ghost.ms,
+      endScale: fx.ghost.endScale,
+      ease: 'Cubic.Out',
+      fontSize: fonts.tile,
+    });
+  }
+
+  /** New tiles fly in from outside the screen, one after another. */
   private buildTiles(): void {
     for (const tile of this.tiles) tile.destroy();
-    this.tiles = currentLevel(this.state).letters.map(
-      (letter) => new LetterTile(this, letter, layout.tileRadius),
-    );
+    this.spin = 0;
+    const letters = currentLevel(this.state).letters;
+    this.tiles = letters.map((letter) => new LetterTile(this, letter, layout.tileRadius));
+    const { fromRadius, ms, staggerMs } = fx.flyIn;
+    const still = reducedMotion();
+    this.tileRadii = letters.map(() => (still ? layout.orbitRadius : fromRadius));
+    this.tiles.forEach((tile, i) => {
+      tile.setAlpha(0);
+      this.tweens.add({ targets: tile, alpha: 1, delay: i * staggerMs, duration: ms });
+      if (still) return;
+      this.tweens.addCounter({
+        from: fromRadius,
+        to: layout.orbitRadius,
+        delay: i * staggerMs,
+        duration: ms,
+        ease: 'Back.Out',
+        onUpdate: (tween) => {
+          this.tileRadii[i] = tween.getValue() ?? layout.orbitRadius;
+        },
+      });
+    });
     this.tilePositions().forEach((p, i) => this.tiles[i]?.setPosition(p.x, p.y));
+  }
+
+  private flyTilesOut(): void {
+    const { radius, ms } = fx.flyOut;
+    this.tweens.add({ targets: this.tiles, alpha: 0, duration: ms, ease: 'Cubic.In' });
+    if (reducedMotion()) return;
+    const startRadii = [...this.tileRadii];
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: ms,
+      ease: 'Cubic.In',
+      onUpdate: (tween) => {
+        const t = tween.getValue() ?? 0;
+        this.tileRadii = startRadii.map((r) => r + (radius - r) * t);
+      },
+    });
   }
 
   private tilePositions(): Point[] {
     const count = currentLevel(this.state).letters.length;
-    return orbitPositions(count, this.angle, layout.orbitRadius, layout.planet);
+    const { planet, orbitRadius } = layout;
+    return orbitPositions(count, this.angle + this.spin, orbitRadius, planet).map((p, i) => {
+      const k = (this.tileRadii[i] ?? orbitRadius) / orbitRadius;
+      return { x: planet.x + (p.x - planet.x) * k, y: planet.y + (p.y - planet.y) * k };
+    });
   }
 
   private showMessage(text: string, color: number): void {
@@ -270,6 +471,8 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    // Keys typed into a text box (e.g. the dev tuning panel) aren't meant for the game.
+    if (event.target instanceof HTMLInputElement) return;
     if (event.repeat && event.key !== 'Backspace') return;
     if (event.key === 'Enter') this.dispatch({ type: 'submit', now: this.time.now });
     else if (event.key === 'Backspace') this.dispatch({ type: 'removeLast' });

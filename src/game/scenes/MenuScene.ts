@@ -77,6 +77,7 @@ export class MenuScene extends Phaser.Scene {
     createButton(this, cx, menu.buttonY, 'Play', play);
 
     const onKey = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLInputElement) return;
       if (event.key === 'Enter' && !event.repeat) play();
     };
     window.addEventListener('keydown', onKey);
