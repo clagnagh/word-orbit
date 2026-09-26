@@ -13,15 +13,19 @@ import {
   type RejectReason,
 } from '../../core/game.ts';
 import type { Puzzle } from '../../core/puzzle.ts';
-import { SCORING } from '../../core/rules.ts';
+import { LEVELS, MIN_WORD_LENGTH, SCORING } from '../../core/rules.ts';
 import { secondsLeft } from '../../core/scoring.ts';
+import { toCss } from '../color.ts';
 import { distance, isInRect, orbitPositions, pickTile, type Point } from '../hitTest.ts';
+import { Background } from '../objects/Background.ts';
+import { FoundWords } from '../objects/FoundWords.ts';
 import { LetterTile } from '../objects/LetterTile.ts';
 import { Planet } from '../objects/Planet.ts';
+import { TimerRing, timerColor } from '../objects/TimerRing.ts';
 import { Tray } from '../objects/Tray.ts';
 import type { ResultsData } from './ResultsScene.ts';
 
-const { colors, fonts, input, layout, orbit, timing } = tuning;
+const { fonts, input, layout, orbit, palette, timing } = tuning;
 
 export interface PlayData {
   puzzleNumber: number;
@@ -40,13 +44,16 @@ export class PlayScene extends Phaser.Scene {
   private state!: GameState;
   private angle = 0;
   private tiles: LetterTile[] = [];
+  private background!: Background;
+  private planet!: Planet;
+  private timerRing!: TimerRing;
   private tray!: Tray;
+  private foundWords!: FoundWords;
   private levelText!: Phaser.GameObjects.Text;
   private scoreText!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
   private messageText!: Phaser.GameObjects.Text;
-  private foundText!: Phaser.GameObjects.Text;
   private messageTimer?: Phaser.Time.TimerEvent;
   private trayHold?: Phaser.Time.TimerEvent;
 
@@ -63,31 +70,21 @@ export class PlayScene extends Phaser.Scene {
   }
 
   create(): void {
-    new Planet(this);
+    this.background = new Background(this);
+    this.timerRing = new TimerRing(this);
+    this.planet = new Planet(this, layout.planet.x, layout.planet.y, layout.planet.radius, true);
     this.tray = new Tray(this);
+    this.foundWords = new FoundWords(this);
+    this.createHud();
 
-    const hudStyle = { fontFamily: fonts.family, fontSize: `${fonts.hud}px`, color: colors.text };
-    const m = layout.hudSideMargin;
-    this.levelText = this.add.text(m, layout.hudY, '', hudStyle).setOrigin(0, 0.5);
-    this.scoreText = this.add.text(layout.width / 2, layout.hudY, '', hudStyle).setOrigin(0.5);
-    this.timerText = this.add.text(layout.width - m, layout.hudY, '', hudStyle).setOrigin(1, 0.5);
-    this.comboText = this.add
-      .text(layout.width / 2, layout.comboY, '', { ...hudStyle, color: colors.good })
-      .setOrigin(0.5);
     this.messageText = this.add
       .text(layout.width / 2, layout.messageY, '', {
         fontFamily: fonts.family,
         fontSize: `${fonts.message}px`,
-        color: colors.text,
+        fontStyle: fonts.medium,
+        color: toCss(palette.text),
       })
       .setOrigin(0.5);
-    this.foundText = this.add.text(layout.foundWords.x, layout.foundWords.y, '', {
-      fontFamily: fonts.family,
-      fontSize: `${fonts.foundWords}px`,
-      color: colors.dimText,
-      wordWrap: { width: layout.foundWords.width },
-      lineSpacing: layout.foundWords.lineSpacing,
-    });
 
     this.input.on('pointerdown', this.onPointerDown, this);
     this.input.on('pointerup', this.onPointerUp, this);
@@ -102,12 +99,54 @@ export class PlayScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    const multiplier = orbit.levelSpeedMultipliers[this.state.levelIndex] ?? 1;
     if (this.state.phase === 'playing') {
-      const multiplier = orbit.levelSpeedMultipliers[this.state.levelIndex] ?? 1;
       this.angle += orbit.baseSpeed * multiplier * (delta / 1000);
     }
+    this.background.update(delta, multiplier);
     this.dispatch({ type: 'tick', now: this.time.now });
     this.tilePositions().forEach((p, i) => this.tiles[i]?.setPosition(p.x, p.y));
+  }
+
+  private createHud(): void {
+    const { hud } = layout;
+    const label = (x: number, text: string, originX: number) =>
+      this.add
+        .text(x, hud.labelY, text, {
+          fontFamily: fonts.family,
+          fontSize: `${fonts.hudLabel}px`,
+          color: toCss(palette.dimText),
+        })
+        .setOrigin(originX, 0.5)
+        .setLetterSpacing(fonts.labelLetterSpacing);
+    const value = (x: number, originX: number) =>
+      this.add
+        .text(x, hud.valueY, '', {
+          fontFamily: fonts.family,
+          fontSize: `${fonts.hudValue}px`,
+          fontStyle: fonts.bold,
+          color: toCss(palette.text),
+        })
+        .setOrigin(originX, 0.5);
+
+    // Level and time are anchored to the screen edges, so changing digit widths
+    // only move their inner edge; the score is centred under its label.
+    const left = hud.sideMargin;
+    const right = layout.width - hud.sideMargin;
+    label(left, 'LEVEL', 0);
+    label(layout.width / 2, 'SCORE', 0.5);
+    label(right, 'TIME', 1);
+    this.levelText = value(left, 0);
+    this.scoreText = value(layout.width / 2, 0.5);
+    this.timerText = value(right, 1);
+    this.comboText = this.add
+      .text(layout.width / 2, layout.comboY, '', {
+        fontFamily: fonts.family,
+        fontSize: `${fonts.combo}px`,
+        fontStyle: fonts.bold,
+        color: toCss(palette.accent),
+      })
+      .setOrigin(0.5);
   }
 
   /** The one way the scene changes the game: send an action, draw the new state, react to events. */
@@ -121,38 +160,53 @@ export class PlayScene extends Phaser.Scene {
 
   private draw(): void {
     const { state } = this;
-    const levelCount = state.puzzle.levels.length;
-    this.levelText.setText(`Level ${state.levelIndex + 1}/${levelCount}`);
-    this.scoreText.setText(`Score ${totalScore(state).toLocaleString('en-US')}`);
-    this.timerText.setText(`⏱ ${secondsLeft(state.remainingMs)}`);
+    const level = currentLevel(state);
+    const limit = LEVELS[state.levelIndex]?.timeLimitMs ?? 1;
+    const seconds = secondsLeft(state.remainingMs);
+
+    this.levelText.setText(`${state.levelIndex + 1}/${state.puzzle.levels.length}`);
+    this.scoreText.setText(totalScore(state).toLocaleString('en-US'));
+    this.timerText
+      .setText(String(seconds))
+      .setColor(
+        toCss(seconds < tuning.timerRing.warnBelowSec ? timerColor(seconds) : palette.text),
+      );
+    this.timerRing.setTime(state.remainingMs / limit, seconds);
     this.comboText.setText(
       state.comboTenths > SCORING.comboStartTenths
-        ? `Combo ×${(state.comboTenths / 10).toFixed(1)}`
+        ? `COMBO ×${(state.comboTenths / 10).toFixed(1)}`
         : '',
     );
-    this.tray.setWord(trayWord(state));
-    this.tiles.forEach((tile, id) => tile.setSelected(state.tray.includes(id)));
+
+    const word = trayWord(state);
+    this.tray.setWord(word);
+    this.planet.setReady(word.length >= MIN_WORD_LENGTH);
+    this.tiles.forEach((tile, id) => {
+      const position = state.tray.indexOf(id);
+      tile.setOrder(position === -1 ? null : position + 1);
+    });
+
     const found = state.progress[state.levelIndex]?.foundWords ?? [];
-    this.foundText.setText(found.length ? found.map((w) => w.toUpperCase()).join('   ') : '');
+    this.foundWords.update(found, level.validWords.length);
   }
 
   private onGameEvent(event: GameEvent): void {
     switch (event.type) {
       case 'levelStarted':
         this.buildTiles();
-        this.showMessage(`Level ${event.level}`, colors.text);
+        this.showMessage(`Level ${event.level}`, palette.text);
         break;
       case 'wordAccepted':
-        this.showMessage(`+${event.points}`, colors.good);
+        this.showMessage(`+${event.points}`, palette.good);
         break;
       case 'wordRejected':
-        this.showMessage(REJECT_MESSAGES[event.reason], colors.bad);
+        this.showMessage(REJECT_MESSAGES[event.reason], palette.bad);
         break;
       case 'keyWordFound':
-        this.showMessage(`Key word! +${event.bonus} bonus`, colors.good);
+        this.showMessage(`Key word! +${event.bonus} bonus`, palette.accent);
         break;
       case 'levelEnded':
-        if (event.reason === 'timeUp') this.showMessage("Time's up!", colors.bad);
+        if (event.reason === 'timeUp') this.showMessage("Time's up!", palette.bad);
         if (event.level < this.state.puzzle.levels.length) {
           this.time.delayedCall(timing.levelTransitionMs, () =>
             this.dispatch({ type: 'nextLevel', now: this.time.now }),
@@ -175,7 +229,9 @@ export class PlayScene extends Phaser.Scene {
 
   private buildTiles(): void {
     for (const tile of this.tiles) tile.destroy();
-    this.tiles = currentLevel(this.state).letters.map((letter) => new LetterTile(this, letter));
+    this.tiles = currentLevel(this.state).letters.map(
+      (letter) => new LetterTile(this, letter, layout.tileRadius),
+    );
     this.tilePositions().forEach((p, i) => this.tiles[i]?.setPosition(p.x, p.y));
   }
 
@@ -184,9 +240,9 @@ export class PlayScene extends Phaser.Scene {
     return orbitPositions(count, this.angle, layout.orbitRadius, layout.planet);
   }
 
-  private showMessage(text: string, color: string): void {
+  private showMessage(text: string, color: number): void {
     this.messageTimer?.remove();
-    this.messageText.setText(text).setColor(color);
+    this.messageText.setText(text).setColor(toCss(color));
     this.messageTimer = this.time.delayedCall(timing.messageMs, () => this.messageText.setText(''));
   }
 

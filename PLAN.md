@@ -218,12 +218,12 @@ Make it work before making it pretty. Use plain circles and rectangles only.
 
 ### Milestone 4 — Visual style
 
-- [ ] Palette, fonts, and sizes all defined in `tuning.ts`. Pick a Google Font, or use a system font stack as a fallback. Ask me which.
-- [ ] Background: a gradient plus a slow parallax star field.
-- [ ] Planet: a soft glow, with a subtle breathing (pulsing) animation.
-- [ ] Tiles: rounded, with a slight shadow and a clear selected state. Show the tap order with small numbers.
-- [ ] A timer ring drawn around the planet that shrinks as time passes.
-- [ ] Menu and Results screens styled to match.
+- [x] Palette, fonts, and sizes all defined in `tuning.ts`. Pick a Google Font, or use a system font stack as a fallback. Ask me which.
+- [x] Background: a gradient plus a slow parallax star field.
+- [x] Planet: a soft glow, with a subtle breathing (pulsing) animation.
+- [x] Tiles: rounded, with a slight shadow and a clear selected state. Show the tap order with small numbers.
+- [x] A timer ring drawn around the planet that shrinks as time passes.
+- [x] Menu and Results screens styled to match.
 
 **Done when:** I'm happy with how it looks. This is decided by screenshot review rounds, not by tests.
 **Explain to me:** Phaser Graphics vs images, blend modes for glow effects, and why we keep colours in one place.
