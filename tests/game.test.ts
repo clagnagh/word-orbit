@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isSupernova,
+  luckyTile,
   newGame,
   reduce,
   summarize,
@@ -12,6 +14,9 @@ import {
 import type { Puzzle } from '../src/core/puzzle';
 
 // A hand-made puzzle so every rule can be checked exactly.
+// Its lucky star tiles (see luckyTile) are: level 1 tile 0 (the first E), level 2 tile 5 (P),
+// level 3 tile 5 (A). Typing uses the first unused matching tile, so typed words containing E
+// on level 1 use the lucky tile and score double.
 const puzzle: Puzzle = {
   levels: [
     {
@@ -133,9 +138,18 @@ describe('building a word', () => {
 describe('submitting', () => {
   it('accepts a valid word and scores 10 × length²', () => {
     const { state, events } = run(started(), ...submitWord('eel', 1_000));
-    expect(events).toEqual([{ type: 'wordAccepted', word: 'eel', points: 90, comboTenths: 10 }]);
+    expect(events).toEqual([
+      {
+        type: 'wordAccepted',
+        word: 'eel',
+        points: 90 * 2, // uses the lucky E
+        comboTenths: 10,
+        lucky: true,
+        supernova: false,
+      },
+    ]);
     expect(state.progress[0]?.foundWords).toEqual(['eel']);
-    expect(totalScore(state)).toBe(90);
+    expect(totalScore(state)).toBe(180);
     expect(state.tray).toEqual([]);
   });
 
@@ -173,15 +187,15 @@ describe('combo', () => {
     expect(
       events.map((e) => (e.type === 'wordAccepted' ? [e.points, e.comboTenths] : e.type)),
     ).toEqual([
-      [90, 10],
-      [99, 11], // 90 × 1.1
-      [192, 12], // 160 × 1.2
+      [90 * 2, 10], // every word here uses the lucky E: ×2
+      [99 * 2, 11], // 90 × 1.1
+      [192 * 2, 12], // 160 × 1.2
     ]);
   });
 
   it('restarts after more than 5 s', () => {
     const { events } = run(started(), ...submitWord('eel', 1_000), ...submitWord('let', 6_001));
-    expect(events.at(-1)).toMatchObject({ points: 90, comboTenths: 10 });
+    expect(events.at(-1)).toMatchObject({ points: 90 * 2, comboTenths: 10 });
   });
 
   it('resets on any rejected word, even a duplicate', () => {
@@ -199,13 +213,20 @@ describe('key word', () => {
   it('scores the word, adds 500 × level + 5 × seconds left, and ends the level', () => {
     const { state, events } = run(started(), ...submitWord('steel', 30_000));
     expect(events).toEqual([
-      { type: 'wordAccepted', word: 'steel', points: 250, comboTenths: 10 },
+      {
+        type: 'wordAccepted',
+        word: 'steel',
+        points: 250 * 2, // a key word uses every tile, so always the lucky one
+        comboTenths: 10,
+        lucky: true,
+        supernova: false,
+      },
       { type: 'keyWordFound', word: 'steel', bonus: 500 + 5 * 60 },
       { type: 'levelEnded', level: 1, reason: 'keyWord' },
     ]);
     expect(state.phase).toBe('levelEnded');
     expect(state.progress[0]?.keyWordFound).toBe(true);
-    expect(totalScore(state)).toBe(250 + 800);
+    expect(totalScore(state)).toBe(500 + 800);
   });
 
   it('accepts an anagram that uses every letter as the key word', () => {
@@ -281,10 +302,10 @@ describe('levels', () => {
     expect(state.phase).toBe('over');
     expect(events.slice(-2)).toEqual([
       { type: 'levelEnded', level: 3, reason: 'keyWord' },
-      { type: 'gameOver', score: 490 + 1500 + 5 * 80 },
+      { type: 'gameOver', score: 490 * 2 + 1500 + 5 * 80 },
     ]);
     expect(summarize(state)).toEqual({
-      score: 2390,
+      score: 2880,
       wordCount: 1,
       levels: [
         { keyWordFound: false, wordCount: 0 },
@@ -292,5 +313,77 @@ describe('levels', () => {
         { keyWordFound: true, wordCount: 1 },
       ],
     });
+  });
+});
+
+describe('lucky star tile', () => {
+  const level2 = () =>
+    run(started(), ...submitWord('steel', 1_000), { type: 'nextLevel', now: 2_000 }).state;
+
+  it('is the same tile every time for the same level', () => {
+    expect(luckyTile(puzzle.levels[1]!)).toBe(luckyTile(puzzle.levels[1]!));
+    expect(puzzle.levels[1]!.letters[luckyTile(puzzle.levels[1]!)]).toBe('p');
+  });
+
+  it('doubles words that use it, and only those', () => {
+    const { events } = run(level2(), ...submitWord('ant', 3_000), ...submitWord('pan', 20_000));
+    expect(events).toEqual([
+      {
+        type: 'wordAccepted',
+        word: 'ant',
+        points: 90,
+        comboTenths: 10,
+        lucky: false,
+        supernova: false,
+      },
+      {
+        type: 'wordAccepted',
+        word: 'pan',
+        points: 180,
+        comboTenths: 10,
+        lucky: true,
+        supernova: false,
+      },
+    ]);
+  });
+});
+
+describe('supernova', () => {
+  // Level 2: six quick words take the combo to ×1.5, which starts a Supernova.
+  const quick = ['ant', 'lane', 'late', 'pan', 'pane', 'panel'];
+  const toSupernova = () => {
+    const start = run(started(), ...submitWord('steel', 1_000), { type: 'nextLevel', now: 2_000 });
+    return run(start.state, ...quick.flatMap((w, i) => submitWord(w, 3_000 + i * 1_000)));
+  };
+
+  it('starts when the combo reaches ×1.5 and lasts 8 s', () => {
+    const { state, events } = toSupernova();
+    expect(events.filter((e) => e.type === 'supernovaStarted')).toEqual([
+      { type: 'supernovaStarted', until: 8_000 + 8_000 },
+    ]);
+    expect(isSupernova(state, 15_999)).toBe(true);
+    expect(isSupernova(state, 16_000)).toBe(false);
+  });
+
+  it('doubles points while active, stacking with the lucky tile', () => {
+    const { events } = run(toSupernova().state, ...submitWord('plan', 9_000));
+    // 10 × 4² = 160, × combo 1.6 = 256, × lucky 2, × supernova 2.
+    expect(events).toEqual([
+      {
+        type: 'wordAccepted',
+        word: 'plan',
+        points: 1024,
+        comboTenths: 16,
+        lucky: true,
+        supernova: true,
+      },
+    ]);
+  });
+
+  it('does not restart while already active, and ends at the next level', () => {
+    const { state, events } = run(toSupernova().state, ...submitWord('plan', 9_000));
+    expect(events.some((e) => e.type === 'supernovaStarted')).toBe(false);
+    const next = run(state, ...submitWord('planet', 10_000), { type: 'nextLevel', now: 11_000 });
+    expect(next.state.supernovaUntil).toBeNull();
   });
 });

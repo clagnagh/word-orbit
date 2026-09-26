@@ -3,7 +3,8 @@
 // (e.g. play a sound, burst particles). Time always arrives as `now`, never read from a clock.
 
 import { isFullWord, type Level, type Puzzle } from './puzzle.ts';
-import { LEVELS, MIN_WORD_LENGTH, SCORING } from './rules.ts';
+import { hashString } from './rng.ts';
+import { BONUSES, LEVELS, MIN_WORD_LENGTH, SCORING } from './rules.ts';
 import { applyCombo, keyWordBonus, nextComboTenths, wordScore } from './scoring.ts';
 
 export type Phase = 'ready' | 'playing' | 'levelEnded' | 'over';
@@ -28,6 +29,8 @@ export interface GameState {
   readonly lastTickAt: number | null;
   readonly comboTenths: number;
   readonly lastAcceptedAt: number | null;
+  /** While `now` is before this time, words score Supernova points. */
+  readonly supernovaUntil: number | null;
 }
 
 export type Action =
@@ -42,7 +45,17 @@ export type Action =
 
 export type GameEvent =
   | { type: 'levelStarted'; level: number }
-  | { type: 'wordAccepted'; word: string; points: number; comboTenths: number }
+  | {
+      type: 'wordAccepted';
+      word: string;
+      points: number;
+      comboTenths: number;
+      /** The word used the lucky star tile. */
+      lucky: boolean;
+      /** The word was scored during a Supernova. */
+      supernova: boolean;
+    }
+  | { type: 'supernovaStarted'; until: number }
   | { type: 'wordRejected'; word: string; reason: RejectReason }
   | { type: 'keyWordFound'; word: string; bonus: number }
   | { type: 'levelEnded'; level: number; reason: 'keyWord' | 'timeUp' }
@@ -66,7 +79,17 @@ export function newGame(puzzle: Puzzle): GameState {
     lastTickAt: null,
     comboTenths: SCORING.comboStartTenths,
     lastAcceptedAt: null,
+    supernovaUntil: null,
   };
+}
+
+/** The level's gold "lucky star" tile: fixed for each level, so everyone gets the same one. */
+export function luckyTile(level: Level): number {
+  return hashString(`lucky:${level.keyWord}:${level.letters.join('')}`) % level.letters.length;
+}
+
+export function isSupernova(state: GameState, now: number): boolean {
+  return state.supernovaUntil !== null && now < state.supernovaUntil;
 }
 
 export function currentLevel(state: GameState): Level {
@@ -142,6 +165,7 @@ function beginLevel(state: GameState, levelIndex: number, now: number): Step {
       lastTickAt: now,
       comboTenths: SCORING.comboStartTenths,
       lastAcceptedAt: null,
+      supernovaUntil: null,
     },
     events: [{ type: 'levelStarted', level: levelIndex + 1 }],
   };
@@ -205,7 +229,13 @@ function judgeWord(state: GameState, now: number): Step {
   }
 
   const comboTenths = nextComboTenths(state.comboTenths, state.lastAcceptedAt, now);
-  const points = applyCombo(wordScore(word.length), comboTenths);
+  const lucky = state.tray.includes(luckyTile(level));
+  const supernova = isSupernova(state, now);
+  const points =
+    applyCombo(wordScore(word.length), comboTenths) *
+    (lucky ? BONUSES.luckyMultiplier : 1) *
+    (supernova ? BONUSES.supernovaMultiplier : 1);
+  const startsSupernova = !supernova && comboTenths >= BONUSES.supernovaAtComboTenths;
   const isKey = isFullWord(level, word);
   const bonus = isKey ? keyWordBonus(state.levelIndex + 1, state.remainingMs) : 0;
 
@@ -219,9 +249,15 @@ function judgeWord(state: GameState, now: number): Step {
     tray: [],
     comboTenths,
     lastAcceptedAt: now,
+    supernovaUntil: startsSupernova ? now + BONUSES.supernovaMs : state.supernovaUntil,
     progress: state.progress.map((p, i) => (i === state.levelIndex ? updated : p)),
   };
-  const events: GameEvent[] = [{ type: 'wordAccepted', word, points, comboTenths }];
+  const events: GameEvent[] = [
+    { type: 'wordAccepted', word, points, comboTenths, lucky, supernova },
+  ];
+  if (startsSupernova) {
+    events.push({ type: 'supernovaStarted', until: now + BONUSES.supernovaMs });
+  }
   if (!isKey) return { state: next, events };
 
   events.push({ type: 'keyWordFound', word, bonus });

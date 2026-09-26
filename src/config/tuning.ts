@@ -143,6 +143,30 @@ export const tuning = {
   /** hitSize is the invisible tap area: bigger than the drawn button so it's easy to hit (≥ 48 px on a phone). */
   muteButton: { x: 668, y: 1228, radius: 30, hitSize: 100, iconSize: 14, lineWidth: 4 },
 
+  /** Fun extras: the lucky star tile, Supernova and praise. (Rule numbers are in core/rules.ts.) */
+  fun: {
+    luckyTileColor: 0xffd98a,
+    luckyLabel: 'LUCKY ×2',
+    luckyBurstCount: 12,
+    supernovaColor: 0xffb347,
+    supernovaLabel: 'SUPERNOVA! ×2',
+    supernovaStarSurge: 6,
+    /** Cheers for longer words: the last entry whose minLength fits the word is shown. */
+    praise: [
+      { minLength: 4, text: 'Nice!' },
+      { minLength: 5, text: 'Great!' },
+      { minLength: 6, text: 'Amazing!' },
+    ],
+    praiseFontSize: 40,
+    /** Gap between the praise and the points above it. */
+    praiseOffsetY: 56,
+    /** Supernova sound: a fast rising run of these semitones. */
+    supernovaNotes: [0, 7, 12, 19, 24],
+    supernovaGapMs: 50,
+    /** The lucky sparkle plays this many semitones above the combo blip. */
+    luckySemitones: 12,
+  },
+
   /** Juice: the small effects that make actions feel good. Durations are in ms. */
   fx: {
     /** Tapped tile grows, then springs back. */

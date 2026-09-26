@@ -8,6 +8,9 @@ const GLOW_TEXTURE_SIZE = 256;
 /** The glowing planet. Its ✓ brightens when the current word is long enough to submit. */
 export class Planet extends Phaser.GameObjects.Container {
   private readonly check?: Phaser.GameObjects.Graphics;
+  private readonly core: Phaser.GameObjects.Arc;
+  private readonly glow: Phaser.GameObjects.Image;
+  private supernova = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, radius: number, showCheck: boolean) {
     super(scene, x, y);
@@ -18,7 +21,9 @@ export class Planet extends Phaser.GameObjects.Container {
       .image(0, 0, GLOW_TEXTURE)
       .setDisplaySize(radius * planet.glowScale * 2, radius * planet.glowScale * 2)
       .setBlendMode(Phaser.BlendModes.ADD);
-    this.add([glow, scene.add.circle(0, 0, radius, palette.planet)]);
+    this.core = scene.add.circle(0, 0, radius, palette.planet);
+    this.glow = glow;
+    this.add([glow, this.core]);
 
     if (showCheck) {
       this.check = drawCheck(scene).setAlpha(planet.checkIdleAlpha);
@@ -36,6 +41,15 @@ export class Planet extends Phaser.GameObjects.Container {
       repeat: -1,
     });
     scene.add.existing(this);
+  }
+
+  /** Glow amber while a Supernova is active. */
+  setSupernova(on: boolean): void {
+    if (on === this.supernova) return;
+    this.supernova = on;
+    this.core.setFillStyle(on ? tuning.fun.supernovaColor : palette.planet);
+    if (on) this.glow.setTint(tuning.fun.supernovaColor);
+    else this.glow.clearTint();
   }
 
   setReady(ready: boolean): void {

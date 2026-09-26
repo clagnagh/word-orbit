@@ -26,3 +26,14 @@ export const SCORING = {
   comboStepTenths: 1,
   comboMaxTenths: 20,
 } as const;
+
+/** Fun extras. */
+export const BONUSES = {
+  /** Words that use the level's gold "lucky star" tile score this many times the points. */
+  luckyMultiplier: 2,
+  /** Reaching this combo (in tenths, 15 = ×1.5) starts a Supernova… */
+  supernovaAtComboTenths: 15,
+  /** …which multiplies every word's points by this for supernovaMs. */
+  supernovaMultiplier: 2,
+  supernovaMs: 8_000,
+} as const;

@@ -101,4 +101,6 @@ export const sfx = {
   levelStart: () => play(audio.recipes.whoosh),
   tick: (high: boolean) => play(high ? audio.recipes.tick : audio.recipes.tock),
   gameOver: () => phrase(audio.gameOverNotes, audio.gameOverGapMs),
+  supernova: () => phrase(tuning.fun.supernovaNotes, tuning.fun.supernovaGapMs),
+  lucky: () => play(audio.recipes.comboBlip, semitoneRatio(tuning.fun.luckySemitones)),
 };

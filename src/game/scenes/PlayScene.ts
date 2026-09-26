@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { tuning } from '../../config/tuning.ts';
 import {
   currentLevel,
+  isSupernova,
+  luckyTile,
   newGame,
   reduce,
   summarize,
@@ -36,7 +38,12 @@ import { TimerRing, timerColor } from '../objects/TimerRing.ts';
 import { Tray } from '../objects/Tray.ts';
 import type { ResultsData } from './ResultsScene.ts';
 
-const { fonts, fx, input, layout, orbit, palette, timing } = tuning;
+const { fonts, fun, fx, input, layout, orbit, palette, timing } = tuning;
+
+/** The cheer for a word of this length, if it's long enough to earn one. */
+function praiseFor(word: string): string | undefined {
+  return fun.praise.filter((p) => word.length >= p.minLength).at(-1)?.text;
+}
 
 export interface PlayData {
   puzzleNumber: number;
@@ -233,7 +240,17 @@ export class PlayScene extends Phaser.Scene {
       this.shown.score = score;
       this.scoreText.setText(score.toLocaleString('en-US'));
     }
-    if (state.comboTenths !== this.shown.comboTenths) this.drawCombo(state.comboTenths);
+    // While a Supernova lasts, it takes over the combo line with a countdown.
+    const supernovaLeft = isSupernova(state, this.time.now)
+      ? Math.ceil(((state.supernovaUntil ?? 0) - this.time.now) / 1000)
+      : 0;
+    this.planet.setSupernova(supernovaLeft > 0);
+    if (supernovaLeft > 0) {
+      this.comboText.setText(`SUPERNOVA ×2 · ${supernovaLeft}s`);
+      this.shown.comboTenths = -1;
+    } else if (state.comboTenths !== this.shown.comboTenths) {
+      this.drawCombo(state.comboTenths);
+    }
 
     const word = trayWord(state);
     this.tray.setWord(word);
@@ -298,12 +315,44 @@ export class PlayScene extends Phaser.Scene {
           }),
         );
         const arriveMs = reducedMotion() ? 0 : ms + staggerMs * (before.letterPositions.length - 1);
+        const praise = before.keyWord ? undefined : praiseFor(event.word);
         this.time.delayedCall(arriveMs, () => {
           burst(this, planet.x, planet.y, palette.star, fx.burst.count, planet.radius);
           floatText(this, planet.x, planet.y - planet.radius, `+${event.points}`, palette.good);
+          if (praise) {
+            const y = planet.y - planet.radius - fun.praiseOffsetY;
+            floatText(this, planet.x, y, praise, palette.accent, fun.praiseFontSize);
+          }
+          if (event.lucky && !before.keyWord) {
+            sfx.lucky();
+            burst(this, planet.x, planet.y, fun.luckyTileColor, fun.luckyBurstCount, planet.radius);
+            floatText(
+              this,
+              planet.x,
+              planet.y + planet.radius + fun.praiseOffsetY,
+              fun.luckyLabel,
+              fun.luckyTileColor,
+            );
+          }
         });
         break;
       }
+      case 'supernovaStarted':
+        sfx.supernova();
+        vibrate('keyWord');
+        flash(this, fun.supernovaColor);
+        this.planet.setSupernova(true);
+        this.background.surge(fun.supernovaStarSurge, fx.starSurge.ms);
+        floatText(
+          this,
+          planet.x,
+          planet.y,
+          fun.supernovaLabel,
+          fun.supernovaColor,
+          fx.floatText.keyWordFontSize,
+          fx.floatText.keyWordMs,
+        );
+        break;
       case 'wordRejected':
         sfx.wrong();
         vibrate('wrong');
@@ -421,6 +470,7 @@ export class PlayScene extends Phaser.Scene {
     this.spin = 0;
     const letters = currentLevel(this.state).letters;
     this.tiles = letters.map((letter) => new LetterTile(this, letter, layout.tileRadius));
+    this.tiles[luckyTile(currentLevel(this.state))]?.setLucky(true);
     const { fromRadius, ms, staggerMs } = fx.flyIn;
     const still = reducedMotion();
     this.tileRadii = letters.map(() => (still ? layout.orbitRadius : fromRadius));

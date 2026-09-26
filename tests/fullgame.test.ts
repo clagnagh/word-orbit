@@ -102,18 +102,23 @@ describe('a full daily game', () => {
   });
 
   it('adds up the score from the rules in PLAN.md', () => {
+    // Words that use the level's lucky star tile score ×2; each accepted event says which did.
+    const accepted = events.filter((e) => e.type === 'wordAccepted');
+    const x = (i: number) => (accepted[i]?.lucky ? 2 : 1);
     const s = (w: string) => 10 * w.length ** 2;
     const b0 = bonus(0);
     const b1 = bonus(1);
     const b2 = bonus(2);
     const level1 =
-      s(b0[0]!) +
-      Math.round(s(b0[1]!) * 1.1) + // within 5 s → combo ×1.1
-      s(l1!.keyWord) + // the rejected word reset the combo
+      s(b0[0]!) * x(0) +
+      Math.round(s(b0[1]!) * 1.1) * x(1) + // within 5 s → combo ×1.1
+      s(l1!.keyWord) * 2 + // the rejected word reset the combo; key words always use the lucky tile
       (500 * 1 + 5 * 80); // key word bonus with 80 s left
-    const level2 = s(b1[0]!) + s(l2!.keyWord) + (500 * 2 + 5 * 70); // 17 s gap: no combo
-    const level3 = s(b2[0]!) + Math.round(s(b2[1]!) * 1.1) + Math.round(s(b2[2]!) * 1.2);
+    const level2 = s(b1[0]!) * x(3) + s(l2!.keyWord) * 2 + (500 * 2 + 5 * 70); // 17 s gap: no combo
+    const level3 =
+      s(b2[0]!) * x(5) + Math.round(s(b2[1]!) * 1.1) * x(6) + Math.round(s(b2[2]!) * 1.2) * x(7);
     const expected = level1 + level2 + level3;
+    expect(accepted.every((e) => !e.supernova)).toBe(true);
     expect(events.at(-1)).toEqual({ type: 'gameOver', score: expected });
     expect(summarize(state).score).toBe(expected);
   });

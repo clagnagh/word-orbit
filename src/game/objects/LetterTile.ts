@@ -5,6 +5,7 @@ import { toCss } from '../color.ts';
 const { fonts, palette, tile } = tuning;
 
 export class LetterTile extends Phaser.GameObjects.Container {
+  private readonly face: Phaser.GameObjects.Arc;
   private readonly ring: Phaser.GameObjects.Arc;
   private readonly label: Phaser.GameObjects.Text;
   private readonly badge: Phaser.GameObjects.Container;
@@ -15,7 +16,7 @@ export class LetterTile extends Phaser.GameObjects.Container {
     const shadow = scene.add
       .circle(0, tile.shadowOffsetY, radius, palette.shadow)
       .setAlpha(tile.shadowAlpha);
-    const face = scene.add.circle(0, 0, radius, palette.tile);
+    this.face = scene.add.circle(0, 0, radius, palette.tile);
     this.ring = scene.add
       .circle(0, 0, radius, palette.tile)
       .setStrokeStyle(tile.selectedRingWidth, palette.accent)
@@ -44,7 +45,7 @@ export class LetterTile extends Phaser.GameObjects.Container {
       ])
       .setVisible(false);
 
-    this.add([shadow, face, this.ring, this.label, this.badge]);
+    this.add([shadow, this.face, this.ring, this.label, this.badge]);
     scene.add.existing(this);
   }
 
@@ -55,5 +56,12 @@ export class LetterTile extends Phaser.GameObjects.Container {
     this.badge.setVisible(selected);
     this.badgeText.setText(selected ? String(order) : '');
     this.label.setAlpha(selected ? tile.selectedLetterAlpha : 1);
+  }
+
+  /** The gold lucky star tile. */
+  setLucky(lucky: boolean): void {
+    const color = lucky ? tuning.fun.luckyTileColor : palette.tile;
+    this.face.setFillStyle(color);
+    this.ring.setFillStyle(color);
   }
 }
