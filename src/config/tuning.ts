@@ -41,6 +41,8 @@ export const tuning = {
       rowSpacing: 52,
       maxRows: 3,
       width: 640,
+      /** The last row stays clear of the mute button in the bottom-right corner. */
+      lastRowWidth: 520,
       pillGap: 10,
       pillPaddingX: 16,
       pillHeight: 40,
@@ -92,6 +94,54 @@ export const tuning = {
     gameOverDelayMs: 2_000,
     messageMs: 1_200,
   },
+
+  /**
+   * Sound. Each recipe is a list of zzfx numbers, in this order:
+   * volume, randomness, frequency (Hz), attack, sustain, release (s), shape (0 sine, 1 triangle,
+   * 2 saw, 3 tan, 4 noise), shapeCurve, slide, deltaSlide, pitchJump, pitchJumpTime, repeatTime,
+   * noise, modulation, bitCrush, delay, sustainVolume, decay, tremolo.
+   * Design or tweak recipes at https://killedbyapixel.github.io/ZzFX/ and paste them here.
+   */
+  audio: {
+    masterVolume: 0.3,
+    recipes: {
+      tap: [0.45, 0, 520, 0, 0.02, 0.08, 1, 2],
+      chime: [0.5, 0, 660, 0.01, 0.05, 0.3, 0, 1.5],
+      wrong: [0.5, 0.05, 150, 0, 0.04, 0.14, 1, 1, -6],
+      note: [0.5, 0, 523, 0.005, 0.06, 0.35, 0, 1.8],
+      comboBlip: [0.25, 0, 880, 0, 0.01, 0.06, 0, 1],
+      whoosh: [0.25, 0, 220, 0.2, 0.08, 0.3, 0, 1, 7, 0, 0, 0, 0, 1.2],
+      tick: [0.18, 0, 1400, 0, 0, 0.03, 1],
+      tock: [0.18, 0, 1000, 0, 0, 0.03, 1],
+    },
+    /** Each letter in the word plays this many semitones higher than the one before. */
+    tapSemitoneStep: 2,
+    /** The valid-word chime's second note: ratio 1.5 is a musical fifth above the first. */
+    chimeSecondRatio: 1.5,
+    chimeGapMs: 90,
+    /** Combo blip rises this many semitones per combo step. */
+    comboSemitoneStep: 1,
+    comboDelayMs: 200,
+    /** Key word: a rising arpeggio of these semitones above the note recipe's pitch. */
+    keyWordNotes: [0, 4, 7, 12],
+    keyWordGapMs: 70,
+    /** Game over: a gentle falling phrase. */
+    gameOverNotes: [7, 4, 0],
+    gameOverGapMs: 170,
+    /** Tick-tock plays once per second when this many seconds or fewer remain. */
+    tickFromSec: 10,
+  },
+
+  /** Vibration patterns in ms (on, off, on…). Android only; off when reduced motion is on. */
+  haptics: {
+    tap: [8],
+    valid: [20],
+    wrong: [30, 40, 30],
+    keyWord: [40, 60, 120],
+  },
+
+  /** hitSize is the invisible tap area: bigger than the drawn button so it's easy to hit (≥ 48 px on a phone). */
+  muteButton: { x: 668, y: 1228, radius: 30, hitSize: 100, iconSize: 14, lineWidth: 4 },
 
   /** Juice: the small effects that make actions feel good. Durations are in ms. */
   fx: {

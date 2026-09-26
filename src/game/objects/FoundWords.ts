@@ -43,8 +43,9 @@ export class FoundWords {
       const pill = this.makePill(word);
       const width = pill.width;
       let row = rows.length - 1;
+      const limit = row === area.maxRows - 1 ? area.lastRowWidth : area.width;
       const needed = rowWidths[row]! + (rows[row]!.length ? area.pillGap : 0) + width;
-      if (needed > area.width) {
+      if (needed > limit) {
         if (rows.length === area.maxRows) {
           pill.destroy();
           break;
