@@ -11,15 +11,15 @@ A daily word puzzle game: letter tiles orbit a planet; tap letters to spell word
 
 ## Commands
 
-| Command             | What it does                                                                                                                                            |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run dev`       | Dev server at http://localhost:5173                                                                                                                     |
-| `npm test`          | Vitest (core logic tests in `tests/`)                                                                                                                   |
-| `npm run typecheck` | `tsc --noEmit`                                                                                                                                          |
-| `npm run lint`      | ESLint                                                                                                                                                  |
-| `npm run format`    | Prettier (rewrites files)                                                                                                                               |
-| `npm run build`     | Typecheck + production build into `dist/`                                                                                                               |
-| `npm run wordlists` | Rebuild `src/data/*.json` from the sources in `CREDITS.md` (Node 22.18+). Edit `scripts/blocklist.txt` to remove words, then rerun and commit the JSON. |
+| Command             | What it does                                                                                                                                                                           |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`       | Dev server at http://localhost:5173                                                                                                                                                    |
+| `npm test`          | Vitest (core logic tests in `tests/`)                                                                                                                                                  |
+| `npm run typecheck` | `tsc --noEmit`                                                                                                                                                                         |
+| `npm run lint`      | ESLint                                                                                                                                                                                 |
+| `npm run format`    | Prettier (rewrites files)                                                                                                                                                              |
+| `npm run build`     | Typecheck + production build into `dist/`                                                                                                                                              |
+| `npm run wordlists` | Rebuild `src/data/*.json` (word lists, then definitions) from the sources in `CREDITS.md` (Node 22.18+). Edit `scripts/blocklist.txt` to remove words, then rerun and commit the JSON. |
 
 | `npm run puzzle -- 2026-10-01` | Print that date's puzzle with all answers (no date = today). |
 
@@ -40,6 +40,9 @@ Run `npm test` and `npm run typecheck` after every task.
 - **Game time comes from `performance.now()`** (PlayScene's `now()`), never `this.time.now` or `this.game.loop.time`: the scene clock is stale when a scene starts (this once took Menu time off level 1's timer), and the loop clock freezes while the page is hidden.
 - **Daily loop:** `src/game/session.ts` owns today's date, saving/loading today's game (`core/save.ts`), stats and the "seen help" flag. The preview puzzle (before launch) is never saved or counted. Test other days with `?date=2026-10-02` in `npm run dev` (or `#2026-10-02` on builds made with `VITE_DATE_OVERRIDE=1`); production builds strip the override.
 - **Portrait design size** is 720×1280 with `Phaser.Scale.FIT`. Phones held sideways get the HTML rotate prompt (`src/game/orientation.ts`) and PlayScene pauses; hidden tabs pause too (the `pause` action).
+- **Emoji in text:** never use `setLetterSpacing` on text that contains emoji like 🔥 or 🪐 (outside the basic plane). Phaser spaces text one UTF-16 unit at a time and splits them into broken halves. ✓, ✗ and ⭐ are safe.
+- **Definitions** (`src/data/definitions.json`, ~55 KB gzipped) are only loaded by the results screen, through `loadDefinitions()` in `src/game/definitions.ts`, so they stay out of the first download. Keep it that way: don't import the JSON statically from game code. The on-screen credit line is required by its CC BY licence.
+- **Saved data changes:** new fields in saved stats or games must be optional or versioned, so saves from older builds still load (see `bestPuzzle` in `core/stats.ts`).
 - **Tap sizes:** every tap area is at least `tuning.input.minTapSize` design px (≈50 px on a 320 px-wide phone), and nothing smaller than 22 design px is used for text. `tests/layout.test.ts` checks tiles never overlap the UI; keep it passing when moving things.
 - **Performance:** reuse effect objects through `src/game/fx/pool.ts` instead of creating Text per effect. `draw()` runs every frame, so only call Phaser setters that redraw text (`setColor`, `setShadow`, `setStyle`) when the value changes (see `shown` in PlayScene). Built zzfx sounds are cached in `audio.ts`. The dev build shows an FPS readout top-left.
 - **Keyboard input uses `window` `keydown` listeners**, removed on scene `SHUTDOWN`. Don't use Phaser's keyboard plugin for typing: its queue replayed earlier keys in frames with pointer input, adding duplicate letters.

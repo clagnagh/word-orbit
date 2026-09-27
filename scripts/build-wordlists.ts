@@ -2,15 +2,11 @@
 // Run with `npm run wordlists` (needs Node 22.18+ for built-in TypeScript support).
 // Sources and licences are listed in CREDITS.md.
 
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { LEVELS, MIN_BONUS_WORDS, MIN_WORD_LENGTH } from '../src/core/rules.ts';
-
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const CACHE = join(ROOT, 'scripts', '.cache');
-const OUT = join(ROOT, 'src', 'data');
+import { download, OUT, ROOT, toLines } from './lib.ts';
 
 const SOURCES = {
   enable: 'https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt',
@@ -27,18 +23,6 @@ const MAX_WORD = Math.max(...KEYWORD_LENGTHS);
 const SCOWL_COMMON_FILES = ['english-words.10', 'english-words.20'];
 const MAX_WORDS_JSON_BYTES = 1_000_000;
 
-async function download(name: string, url: string): Promise<Buffer> {
-  const file = join(CACHE, name);
-  if (existsSync(file)) return readFileSync(file);
-  console.log(`Downloading ${url}`);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Download failed (${res.status}): ${url}`);
-  const data = Buffer.from(await res.arrayBuffer());
-  mkdirSync(CACHE, { recursive: true });
-  writeFileSync(file, data);
-  return data;
-}
-
 /** Minimal reader for a .tar archive: returns the files whose name ends with one of `wanted`. */
 function extractFromTar(tar: Buffer, wanted: string[]): Map<string, Buffer> {
   const found = new Map<string, Buffer>();
@@ -54,13 +38,6 @@ function extractFromTar(tar: Buffer, wanted: string[]): Map<string, Buffer> {
     offset = body + Math.ceil(size / 512) * 512;
   }
   return found;
-}
-
-function toLines(text: string): string[] {
-  return text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#'));
 }
 
 /** Possible base forms of an inflected word: "horses" → "horse", "hoping" → "hope", "tried" → "try". */

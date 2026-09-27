@@ -55,6 +55,8 @@ export const tuning = {
       orbitRadius: 150,
       planetRadius: 60,
       tileRadius: 34,
+      /** "🔥 5-DAY STREAK", shown while the streak is alive (not on the preview puzzle). */
+      streakY: 420,
       buttonY: 960,
       buttonWidth: 320,
       buttonHeight: 104,
@@ -62,31 +64,46 @@ export const tuning = {
       buttonHoverScale: 1.04,
     },
     results: {
-      titleY: 100,
-      scoreY: 190,
-      levelsY: 300,
-      levelSpacing: 62,
+      titleY: 70,
+      scoreY: 150,
+      /** "⭐ NEW BEST" under the score, only when this game beat every earlier one. */
+      newBestY: 222,
+      levelsY: 272,
+      levelSpacing: 50,
+      /** The longest key word and its definition, with the dictionary's credit line. */
+      wordOfDay: {
+        labelY: 424,
+        headlineY: 460,
+        definitionY: 484,
+        textWidth: 600,
+        maxLines: 3,
+        lineSpacing: 2,
+        /** The credit sits this far below the definition, however many lines it takes. */
+        creditGap: 12,
+        credit: 'Definition: Open English WordNet · CC BY 4.0',
+        fadeMs: 300,
+      },
       /** Played · Streak · Best, as three columns. */
-      stats: { valueY: 520, labelY: 562, columnsX: [170, 360, 550] },
+      stats: { valueY: 644, labelY: 684, columnsX: [170, 360, 550] },
       /** Bar chart of recent scores; today's bar uses the accent colour. */
       chart: {
-        titleY: 632,
-        top: 664,
-        height: 110,
+        titleY: 728,
+        top: 752,
+        height: 76,
         width: 520,
         maxBars: 14,
         barGap: 8,
         cornerRadius: 4,
         pastAlpha: 0.55,
       },
-      card: { y: 915, width: 560, height: 200, cornerRadius: 28 },
-      shareLineSpacing: 10,
-      buttonY: 1120,
+      card: { y: 968, width: 560, height: 230, cornerRadius: 28 },
+      shareLineSpacing: 8,
+      buttonY: 1150,
       /** Share and Menu sit side by side. */
       buttonsX: [205, 515],
       buttonWidth: 280,
       previewNote: 'Preview games are not saved',
-      previewNoteY: 560,
+      previewNoteY: 664,
     },
   },
 
@@ -173,6 +190,9 @@ export const tuning = {
     statusY: 1060,
     countdownPrefix: 'NEXT PUZZLE IN',
     playedLabel: 'PLAYED ✓',
+    /** Replaces the countdown line when a streak would be lost by not playing today. */
+    keepStreakPrefix: 'KEEP YOUR STREAK ·',
+    keepStreakSuffix: 'LEFT',
     /** Also saved after every word and level change; this covers the timer in between. */
     saveIntervalMs: 2_000,
   },
@@ -331,6 +351,9 @@ export const tuning = {
     foundWord: 24,
     resultsScore: 96,
     resultsLevel: 32,
+    wordOfDay: 30,
+    definition: 26,
+    credit: 22,
     share: 28,
     labelLetterSpacing: 3,
   },

@@ -66,6 +66,7 @@ The share text looks like this:
 Word Orbit #42 🪐
 🟩🟩🟨
 1,240 pts · 9 words · 🔥3
+⭐ New best! Can you beat me?
 wordorbit.example
 ```
 
@@ -73,6 +74,7 @@ wordorbit.example
 - 🟨 = found at least one word, but not the key word
 - ⬛ = found nothing (black rather than red, so it reads with colour blindness)
 - 🔥 = current daily streak
+- ⭐ New best! only appears when the score beats every earlier game; otherwise the line is just "Can you beat me?"
 
 The share must **never reveal the answers**.
 
@@ -282,6 +284,25 @@ Juice means small effects that make actions feel satisfying.
 
 **Done when:** I've played a full game on my own phone with no layout or performance problems.
 **Explain to me:** responsive scaling in Phaser, object pooling, and what gzip size means for load time.
+
+### Milestone 8.5 — Launch polish
+
+- [x] Streak on the menu ("🔥 5-day streak"), and a nudge when today isn't played yet ("Keep your 🔥5 streak · 06:12:33 left").
+- [x] Better share card: "⭐ New best!" when the score beats every earlier game, and a "Can you beat me?" line above the link. Still never reveals answers. (A "top 12% today" rank needs a server, so it waits until after launch.)
+- [x] Word of the day: the results screen shows the longest key word with a short definition from Open English WordNet (CC BY 4.0, credited on screen and in `CREDITS.md`). Definitions load only when the results screen opens, so the first download doesn't grow.
+
+**Done when:** a finished game shows the word of the day, the share text has the new lines, and the menu shows the streak and nudge.
+**Explain to me:** lazy loading (code splitting), what a CC BY licence asks of us, and adding a field to saved data without breaking old saves.
+
+### Milestone 8.6 — Reasons to come back
+
+- [ ] Achievements (about 10 badges), checked in `src/core/`, saved in the browser, with a toast when earned and a 🏆 panel on the menu.
+- [ ] Puzzle archive: a 📅 calendar of every day since launch, coloured by result; past days can be played without changing the streak or daily stats.
+- [ ] Themes: Classic, Mars, Ice and Neon (background, planet, stars, glow), unlocked by streaks and achievements, chosen from a 🎨 panel and remembered.
+- [ ] Menu bottom row: ? 🏆 📅 🎨 🔊, every button at least the minimum tap size.
+
+**Done when:** I've earned a badge, played a past day from the calendar, and switched theme on my phone.
+**Explain to me:** deriving achievements from data instead of tracking flags everywhere, save-data versions, and theming through a palette.
 
 ### Milestone 9 — Monetisation & shipping
 

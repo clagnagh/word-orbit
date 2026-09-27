@@ -22,7 +22,9 @@ describe('shareText', () => {
       ),
       3,
     );
-    expect(text).toBe('Word Orbit #42 🪐\n🟩🟩🟨\n1,240 pts · 9 words · 🔥3\nwordorbit.example');
+    expect(text).toBe(
+      'Word Orbit #42 🪐\n🟩🟩🟨\n1,240 pts · 9 words · 🔥3\nCan you beat me?\nwordorbit.example',
+    );
   });
 
   it('shows ⬛ for a level with no words, and "1 word" in the singular', () => {
@@ -38,11 +40,19 @@ describe('shareText', () => {
       ),
       1,
     );
-    expect(text).toBe('Word Orbit #7 🪐\n🟨⬛⬛\n90 pts · 1 word · 🔥1\nwordorbit.example');
+    expect(text).toBe(
+      'Word Orbit #7 🪐\n🟨⬛⬛\n90 pts · 1 word · 🔥1\nCan you beat me?\nwordorbit.example',
+    );
+  });
+
+  it('celebrates a new best score', () => {
+    expect(shareText(1, summary([[true, 1]], 10), 1, { newBest: true })).toContain(
+      '\n⭐ New best! Can you beat me?\n',
+    );
   });
 
   it('uses a custom URL when given', () => {
-    expect(shareText(1, summary([[true, 1]], 10), 1, 'example.com/play')).toMatch(
+    expect(shareText(1, summary([[true, 1]], 10), 1, { url: 'example.com/play' })).toMatch(
       /\nexample\.com\/play$/,
     );
   });

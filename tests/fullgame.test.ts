@@ -140,7 +140,7 @@ describe('a full daily game', () => {
 
     const text = shareText(puzzleNumber, summary, displayStreak(stats, puzzleNumber));
     expect(text).toBe(
-      `Word Orbit #1 🪐\n🟩🟩🟨\n${summary.score.toLocaleString('en-US')} pts · 8 words · 🔥1\nwordorbit.example`,
+      `Word Orbit #1 🪐\n🟩🟩🟨\n${summary.score.toLocaleString('en-US')} pts · 8 words · 🔥1\nCan you beat me?\nwordorbit.example`,
     );
   });
 });
@@ -148,7 +148,7 @@ describe('a full daily game', () => {
 describe('share text never reveals answers', () => {
   // The fixed parts of the template are allowed; everything else must be counts and emoji.
   const TEMPLATE =
-    /^Word Orbit #\d+ 🪐\n(🟩|🟨|⬛){3}\n[\d,]+ pts · \d+ words? · 🔥\d+\nwordorbit\.example$/u;
+    /^Word Orbit #\d+ 🪐\n(🟩|🟨|⬛){3}\n[\d,]+ pts · \d+ words? · 🔥\d+\n(⭐ New best! )?Can you beat me\?\nwordorbit\.example$/u;
 
   it.each([1, 2, 30, 365])('puzzle #%i, with every word found', (n) => {
     const puzzle = generateDailyPuzzle(n, lists);
@@ -162,9 +162,11 @@ describe('share text never reveals answers', () => {
     });
     expect(state.phase).toBe('over');
 
-    const text = shareText(n, summarize(state), 5);
+    const text = shareText(n, summarize(state), 5, { newBest: true });
     expect(text).toMatch(TEMPLATE);
-    const free = text.replace(/Word Orbit|wordorbit\.example|pts|words?/g, '').toLowerCase();
+    const free = text
+      .replace(/Word Orbit|wordorbit\.example|pts|words?|New best!|Can you beat me\?/g, '')
+      .toLowerCase();
     for (const level of puzzle.levels) {
       for (const w of level.validWords) expect(free).not.toContain(w);
     }

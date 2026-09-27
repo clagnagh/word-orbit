@@ -3,7 +3,7 @@ import { tuning } from '../../config/tuning.ts';
 import { LAUNCH_DATE, msUntilNextPuzzle } from '../../core/daily.ts';
 import { summarize, type GameState } from '../../core/game.ts';
 import { generateDailyPuzzle } from '../../core/puzzle.ts';
-import { hasPlayed } from '../../core/stats.ts';
+import { displayStreak, hasPlayed, streakAtRisk } from '../../core/stats.ts';
 import { toCss } from '../color.ts';
 import { orbitPositions } from '../hitTest.ts';
 import { Background } from '../objects/Background.ts';
@@ -41,6 +41,7 @@ export class MenuScene extends Phaser.Scene {
   private angle = 0;
   private statusText?: Phaser.GameObjects.Text;
   private statusPrefix = '';
+  private statusSuffix = '';
   private help: HelpOverlay | null = null;
 
   constructor() {
@@ -131,15 +132,34 @@ export class MenuScene extends Phaser.Scene {
     if (!primary) button.setAlpha(0.5).disableInteractive();
 
     if (!isPreview) {
-      this.statusPrefix = `${played ? `${daily.playedLabel}  ·  ` : ''}${daily.countdownPrefix} `;
+      // Not played yet with a streak going: the countdown becomes "time left to keep it".
+      const atRisk = !played && streakAtRisk(stats, puzzleNumber);
+      this.statusPrefix = atRisk
+        ? `${daily.keepStreakPrefix} `
+        : `${played ? `${daily.playedLabel}  ·  ` : ''}${daily.countdownPrefix} `;
+      this.statusSuffix = atRisk ? ` ${daily.keepStreakSuffix}` : '';
       this.statusText = this.add
         .text(cx, daily.statusY, '', {
           fontFamily: fonts.family,
           fontSize: `${fonts.hudLabel}px`,
-          color: toCss(palette.dimText),
+          fontStyle: atRisk ? fonts.bold : fonts.regular,
+          color: toCss(atRisk ? palette.accent : palette.dimText),
         })
         .setOrigin(0.5)
         .setLetterSpacing(fonts.labelLetterSpacing);
+
+      const streak = displayStreak(stats, puzzleNumber);
+      if (streak > 0) {
+        // No letter spacing: Phaser spaces text one UTF-16 unit at a time, splitting the 🔥 emoji.
+        this.add
+          .text(cx, menu.streakY, `🔥 ${streak}-DAY STREAK`, {
+            fontFamily: fonts.family,
+            fontSize: `${fonts.subtitle}px`,
+            fontStyle: fonts.bold,
+            color: toCss(palette.accent),
+          })
+          .setOrigin(0.5);
+      }
     }
 
     new MuteButton(this);
@@ -170,7 +190,7 @@ export class MenuScene extends Phaser.Scene {
         this.scene.restart();
         return;
       }
-      this.statusText.setText(this.statusPrefix + formatCountdown(left));
+      this.statusText.setText(this.statusPrefix + formatCountdown(left) + this.statusSuffix);
     }
   }
 
