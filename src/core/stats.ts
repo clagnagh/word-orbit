@@ -7,6 +7,11 @@ export interface Stats {
   readonly streak: number;
   readonly maxStreak: number;
   readonly bestScore: number;
+  /**
+   * The puzzle whose score last beat an earlier best (the first game ever doesn't count).
+   * Added after launch prep, so older saved stats don't have it.
+   */
+  readonly bestPuzzle?: number | null;
   readonly lastPuzzle: number | null;
   /** Most recent games, oldest first, capped at HISTORY_LIMIT. */
   readonly history: readonly { readonly puzzle: number; readonly score: number }[];
@@ -22,7 +27,15 @@ export const STATS_KEY = 'word-orbit:stats';
 export const HISTORY_LIMIT = 30;
 
 export function emptyStats(): Stats {
-  return { played: 0, streak: 0, maxStreak: 0, bestScore: 0, lastPuzzle: null, history: [] };
+  return {
+    played: 0,
+    streak: 0,
+    maxStreak: 0,
+    bestScore: 0,
+    bestPuzzle: null,
+    lastPuzzle: null,
+    history: [],
+  };
 }
 
 export function hasPlayed(stats: Stats, puzzleNumber: number): boolean {
@@ -33,14 +46,26 @@ export function hasPlayed(stats: Stats, puzzleNumber: number): boolean {
 export function recordGame(stats: Stats, puzzleNumber: number, score: number): Stats {
   if (stats.lastPuzzle !== null && puzzleNumber <= stats.lastPuzzle) return stats;
   const streak = stats.lastPuzzle === puzzleNumber - 1 ? stats.streak + 1 : 1;
+  const beatBest = stats.played > 0 && score > stats.bestScore;
   return {
     played: stats.played + 1,
     streak,
     maxStreak: Math.max(stats.maxStreak, streak),
     bestScore: Math.max(stats.bestScore, score),
+    bestPuzzle: beatBest ? puzzleNumber : (stats.bestPuzzle ?? null),
     lastPuzzle: puzzleNumber,
     history: [...stats.history, { puzzle: puzzleNumber, score }].slice(-HISTORY_LIMIT),
   };
+}
+
+/** True if this puzzle's score beat every earlier game's (never true for the very first game). */
+export function isNewBest(stats: Stats, puzzleNumber: number): boolean {
+  return stats.bestPuzzle === puzzleNumber;
+}
+
+/** Today's streak is alive but today's puzzle isn't played yet: worth a reminder. */
+export function streakAtRisk(stats: Stats, todayPuzzle: number): boolean {
+  return displayStreak(stats, todayPuzzle) > 0 && !hasPlayed(stats, todayPuzzle);
 }
 
 /** The streak to show today: it survives until the end of the day after the last game. */
@@ -59,6 +84,7 @@ function isStats(v: unknown): v is Stats {
     isCount(s.streak) &&
     isCount(s.maxStreak) &&
     isCount(s.bestScore) &&
+    (s.bestPuzzle === undefined || s.bestPuzzle === null || Number.isInteger(s.bestPuzzle)) &&
     (s.lastPuzzle === null || Number.isInteger(s.lastPuzzle)) &&
     Array.isArray(s.history) &&
     s.history.every(

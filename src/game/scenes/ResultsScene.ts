@@ -1,10 +1,12 @@
 import Phaser from 'phaser';
 import { tuning } from '../../config/tuning.ts';
+import { wordOfTheDay } from '../../core/definitions.ts';
 import type { GameSummary } from '../../core/game.ts';
 import type { Puzzle } from '../../core/puzzle.ts';
 import { shareText } from '../../core/share.ts';
-import { displayStreak, type Stats } from '../../core/stats.ts';
+import { displayStreak, isNewBest, type Stats } from '../../core/stats.ts';
 import { toCss } from '../color.ts';
+import { loadDefinitions } from '../definitions.ts';
 import { Background } from '../objects/Background.ts';
 import { createButton } from '../objects/Button.ts';
 import { drawStatsPanel } from '../objects/StatsPanel.ts';
@@ -67,6 +69,17 @@ export class ResultsScene extends Phaser.Scene {
       fonts.bold,
     );
 
+    const newBest = data.stats ? isNewBest(data.stats, data.puzzleNumber) : false;
+    if (newBest) {
+      text(
+        results.newBestY,
+        '⭐ NEW BEST',
+        fonts.hudLabel,
+        palette.accent,
+        fonts.bold,
+      ).setLetterSpacing(fonts.labelLetterSpacing);
+    }
+
     // Key words are only revealed here, after the game is over.
     data.puzzle.levels.forEach((level, i) => {
       const outcome = data.summary.levels[i];
@@ -94,7 +107,9 @@ export class ResultsScene extends Phaser.Scene {
       ).setLetterSpacing(fonts.labelLetterSpacing);
     }
 
-    const share = shareText(data.puzzleNumber, data.summary, streak);
+    this.showWordOfTheDay(data.puzzle);
+
+    const share = shareText(data.puzzleNumber, data.summary, streak, { newBest });
     const { card } = results;
     const left = cx - card.width / 2;
     const top = card.y - card.height / 2;
@@ -136,6 +151,54 @@ export class ResultsScene extends Phaser.Scene {
       () => this.scene.start('Menu'),
       results.buttonWidth,
     );
+  }
+
+  /** Fades in once the definitions have loaded; its space is kept free until then. */
+  private showWordOfTheDay(puzzle: Puzzle): void {
+    const { wordOfDay } = results;
+    const cx = layout.width / 2;
+    void loadDefinitions().then((definitions) => {
+      const word = definitions && wordOfTheDay(puzzle, definitions);
+      if (!word || !this.scene.isActive()) return;
+      const style = (size: number, color: number, weight: string = fonts.regular) => ({
+        fontFamily: fonts.family,
+        fontSize: `${size}px`,
+        fontStyle: weight,
+        color: toCss(color),
+        align: 'center',
+      });
+      const label = this.add
+        .text(cx, wordOfDay.labelY, 'WORD OF THE DAY', style(fonts.hudLabel, palette.dimText))
+        .setOrigin(0.5)
+        .setLetterSpacing(fonts.labelLetterSpacing);
+      const headline = this.add
+        .text(
+          cx,
+          wordOfDay.headlineY,
+          `${word.word.toUpperCase()}  (${word.partOfSpeech})`,
+          style(fonts.wordOfDay, palette.accent, fonts.bold),
+        )
+        .setOrigin(0.5);
+      const definition = this.add
+        .text(cx, wordOfDay.definitionY, word.definition, {
+          ...style(fonts.definition, palette.text),
+          wordWrap: { width: wordOfDay.textWidth, useAdvancedWrap: true },
+          maxLines: wordOfDay.maxLines,
+          lineSpacing: wordOfDay.lineSpacing,
+        })
+        .setOrigin(0.5, 0);
+      const credit = this.add
+        .text(
+          cx,
+          definition.y + definition.height + wordOfDay.creditGap,
+          wordOfDay.credit,
+          style(fonts.credit, palette.dimText),
+        )
+        .setOrigin(0.5, 0);
+      const parts = [label, headline, definition, credit];
+      parts.forEach((part) => part.setAlpha(0));
+      this.tweens.add({ targets: parts, alpha: 1, duration: wordOfDay.fadeMs });
+    });
   }
 
   update(_time: number, delta: number): void {

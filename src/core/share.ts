@@ -11,15 +11,21 @@ function levelSquare(level: GameSummary['levels'][number]): string {
   return level.wordCount > 0 ? '🟨' : '⬛';
 }
 
+export interface ShareOptions {
+  /** This score beat every earlier game. */
+  readonly newBest?: boolean;
+  readonly url?: string;
+}
+
 /**
  * The spoiler-free result players paste into chats. Built only from counts and flags,
- * so it cannot contain any answer.
+ * so it cannot contain any answer. The last two lines invite friends to play.
  */
 export function shareText(
   puzzleNumber: number,
   summary: GameSummary,
   streak: number,
-  url: string = SHARE_URL,
+  { newBest = false, url = SHARE_URL }: ShareOptions = {},
 ): string {
   const score = summary.score.toLocaleString('en-US');
   const words = `${summary.wordCount} ${summary.wordCount === 1 ? 'word' : 'words'}`;
@@ -27,6 +33,7 @@ export function shareText(
     `Word Orbit #${puzzleNumber} 🪐`,
     summary.levels.map(levelSquare).join(''),
     `${score} pts · ${words} · 🔥${streak}`,
+    `${newBest ? '⭐ New best! ' : ''}Can you beat me?`,
     url,
   ].join('\n');
 }

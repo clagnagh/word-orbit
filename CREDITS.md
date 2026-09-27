@@ -1,7 +1,8 @@
 # Credits
 
 Word Orbit's word lists (`src/data/words.json`, `src/data/keywords.json`) are built by
-`scripts/build-wordlists.ts` from the sources below.
+`scripts/build-wordlists.ts`, and the definitions by `scripts/build-definitions.ts`, from the
+sources below.
 
 ## ENABLE word list
 
@@ -33,6 +34,16 @@ SCOWL's size 10 and 20 lists draw on the public-domain Moby Words II and 12Dicts
 Used only to remove offensive words from both lists.
 https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words —
 licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) by Shutterstock.
+
+## Open English WordNet
+
+The word-of-the-day definitions (`src/data/definitions.json`), built by
+`scripts/build-definitions.ts` from the 2025 edition. Definitions are shortened, and only the
+key words are kept. The game credits it on the results screen under each definition.
+
+> Open English WordNet, https://github.com/globalwordnet/english-wordnet — licensed under
+> [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Based on Princeton WordNet 3.0
+> (Copyright 2006 Princeton University).
 
 ## Fredoka font
 
