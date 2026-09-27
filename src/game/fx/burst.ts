@@ -4,7 +4,13 @@ import { reducedMotion } from '../motion.ts';
 
 const SPARK_TEXTURE = 'spark';
 
-/** A one-off spray of glowing particles from the edge of a circle (radius 0 = a point). */
+/** One emitter per spark style, kept for the scene's lifetime and fired again for each burst. */
+const emitters = new WeakMap<
+  Phaser.Scene,
+  Map<string, Phaser.GameObjects.Particles.ParticleEmitter>
+>();
+
+/** A spray of glowing particles from the edge of a circle (radius 0 = a point). */
 export function burst(
   scene: Phaser.Scene,
   x: number,
@@ -14,6 +20,27 @@ export function burst(
   fromRadius = 0,
 ): void {
   if (reducedMotion()) return;
+  const emitter = emitterFor(scene, color, count, fromRadius);
+  emitter.setPosition(x, y);
+  emitter.explode(count);
+}
+
+function emitterFor(
+  scene: Phaser.Scene,
+  color: number,
+  count: number,
+  fromRadius: number,
+): Phaser.GameObjects.Particles.ParticleEmitter {
+  let byStyle = emitters.get(scene);
+  if (!byStyle) {
+    byStyle = new Map();
+    emitters.set(scene, byStyle);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => emitters.delete(scene));
+  }
+  const key = `${color}:${count}:${fromRadius}`;
+  const existing = byStyle.get(key);
+  if (existing) return existing;
+
   const { speedMin, speedMax, lifespanMs, particleRadius } = tuning.fx.burst;
   if (!scene.textures.exists(SPARK_TEXTURE)) {
     const g = scene.make.graphics({}, false);
@@ -21,7 +48,7 @@ export function burst(
     g.generateTexture(SPARK_TEXTURE, particleRadius * 2, particleRadius * 2);
     g.destroy();
   }
-  const emitter = scene.add.particles(x, y, SPARK_TEXTURE, {
+  const emitter = scene.add.particles(0, 0, SPARK_TEXTURE, {
     speed: { min: speedMin, max: speedMax },
     lifespan: lifespanMs,
     scale: { start: 1, end: 0 },
@@ -37,6 +64,6 @@ export function burst(
       },
     }),
   });
-  emitter.explode(count);
-  scene.time.delayedCall(lifespanMs + 100, () => emitter.destroy());
+  byStyle.set(key, emitter);
+  return emitter;
 }

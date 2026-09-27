@@ -148,7 +148,7 @@ describe('a full daily game', () => {
 describe('share text never reveals answers', () => {
   // The fixed parts of the template are allowed; everything else must be counts and emoji.
   const TEMPLATE =
-    /^Word Orbit #\d+ 🪐\n(🟩|🟨|🟥){3}\n[\d,]+ pts · \d+ words? · 🔥\d+\nwordorbit\.example$/u;
+    /^Word Orbit #\d+ 🪐\n(🟩|🟨|⬛){3}\n[\d,]+ pts · \d+ words? · 🔥\d+\nwordorbit\.example$/u;
 
   it.each([1, 2, 30, 365])('puzzle #%i, with every word found', (n) => {
     const puzzle = generateDailyPuzzle(n, lists);

@@ -36,6 +36,7 @@ import { MuteButton } from '../objects/MuteButton.ts';
 import { Planet } from '../objects/Planet.ts';
 import { TimerRing, timerColor } from '../objects/TimerRing.ts';
 import { Tray } from '../objects/Tray.ts';
+import { isSideways, onSidewaysChange } from '../orientation.ts';
 import { recordFinishedGame, saveGame } from '../session.ts';
 import type { ResultsData } from './ResultsScene.ts';
 
@@ -50,9 +51,10 @@ export interface PlayData {
 }
 
 const REJECT_MESSAGES: Record<RejectReason, string> = {
-  tooShort: 'Too short',
-  notAWord: 'Not a word',
-  alreadyFound: 'Already found',
+  // Symbols as well as colour, so the difference reads with colour blindness.
+  tooShort: '✗ Too short',
+  notAWord: '✗ Not a word',
+  alreadyFound: '↺ Already found',
 };
 
 /** What the tray showed just before an action, so effects can start from there. */
@@ -73,7 +75,7 @@ export class PlayScene extends Phaser.Scene {
   /** Each tile's current distance from the planet; animated when tiles fly in, out or spiral. */
   private tileRadii: number[] = [];
   private slowMoElapsed: number | null = null;
-  private shown = { comboTenths: 0, score: 0, timerColor: -1, seconds: -1 };
+  private shown = { comboTenths: 0, score: -1, timerColor: -1, goalColor: -1, seconds: -1 };
   private background!: Background;
   private planet!: Planet;
   private timerRing!: TimerRing;
@@ -102,7 +104,7 @@ export class PlayScene extends Phaser.Scene {
     this.tiles = [];
     this.tileRadii = [];
     this.slowMoElapsed = null;
-    this.shown = { comboTenths: 0, score: 0, timerColor: -1, seconds: -1 };
+    this.shown = { comboTenths: 0, score: -1, timerColor: -1, goalColor: -1, seconds: -1 };
     this.trayHold = undefined;
   }
 
@@ -135,18 +137,29 @@ export class PlayScene extends Phaser.Scene {
     );
 
     // Save when the player leaves or hides the page, so a reload picks up from here.
+    // Pause (and save) when the player looks away: another tab, a locked phone, or the phone
+    // turned sideways. Resume as soon as they're back.
     const saveNow = () => this.save();
-    const onHide = () => {
-      if (document.visibilityState === 'hidden') this.save();
+    const syncPause = () => {
+      const away = document.visibilityState === 'hidden' || isSideways();
+      if (away) {
+        this.dispatch({ type: 'pause', now: this.now() });
+        this.save();
+      } else {
+        this.dispatch({ type: 'resume', now: this.now() });
+      }
     };
     window.addEventListener('pagehide', saveNow);
-    document.addEventListener('visibilitychange', onHide);
+    document.addEventListener('visibilitychange', syncPause);
+    const stopWatchingOrientation = onSidewaysChange(syncPause);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       window.removeEventListener('pagehide', saveNow);
-      document.removeEventListener('visibilitychange', onHide);
+      document.removeEventListener('visibilitychange', syncPause);
+      stopWatchingOrientation();
     });
 
     this.beginOrResume();
+    if (isSideways()) syncPause();
   }
 
   /** A fresh game starts; a saved one picks up where it was left. */
@@ -207,12 +220,12 @@ export class PlayScene extends Phaser.Scene {
   }
 
   /**
-   * The time passed to the game rules. Uses the game loop's clock: the scene clock
-   * (this.time.now) holds a stale value when a scene starts, which used to take the time spent
-   * on the Menu off level 1's timer.
+   * The time passed to the game rules: the browser's always-current clock. Phaser's clocks go
+   * stale — the scene clock when a scene starts (which once took Menu time off level 1), and the
+   * game loop's clock while the page is hidden (which would count time away after a pause).
    */
   private now(): number {
-    return this.game.loop.time;
+    return performance.now();
   }
 
   private speedMultiplier(): number {
@@ -314,7 +327,9 @@ export class PlayScene extends Phaser.Scene {
     }
     const score = totalScore(state);
     if (score !== this.shown.score) {
-      if (score > this.shown.score) pop(this, this.scoreText, fx.scorePopScale);
+      // shown.score starts at -1 so the first draw always writes the score (even 0).
+      if (this.shown.score >= 0 && score > this.shown.score)
+        pop(this, this.scoreText, fx.scorePopScale);
       this.shown.score = score;
       this.scoreText.setText(score.toLocaleString('en-US'));
     }
@@ -330,11 +345,14 @@ export class PlayScene extends Phaser.Scene {
 
     const goal = levelGoal(level);
     const goalDone = state.progress[state.levelIndex]?.goalDone ?? false;
-    this.goalText
-      .setText(
-        `GOAL: ${goal.count} × ${goal.length}-LETTER WORDS  ${goalDone ? '✓' : `${goalProgress(state)}/${goal.count}`}`,
-      )
-      .setColor(toCss(goalDone ? palette.good : palette.dimText));
+    this.goalText.setText(
+      `GOAL: ${goal.count} × ${goal.length}-LETTER WORDS  ${goalDone ? '✓' : `${goalProgress(state)}/${goal.count}`}`,
+    );
+    const goalColor = goalDone ? palette.good : palette.dimText;
+    if (goalColor !== this.shown.goalColor) {
+      this.shown.goalColor = goalColor;
+      this.goalText.setColor(toCss(goalColor));
+    }
 
     const found = state.progress[state.levelIndex]?.foundWords ?? [];
     this.foundWords.update(found, level.validWords.length);
@@ -586,7 +604,9 @@ export class PlayScene extends Phaser.Scene {
       this.dispatch(
         this.state.tray.length > 0 ? { type: 'submit', now: this.now() } : { type: 'hint' },
       );
-    } else if (isInRect(tap, layout.tray)) {
+    } else if (
+      isInRect(tap, { ...layout.tray, height: Math.max(layout.tray.height, input.minTapSize) })
+    ) {
       // Tap = remove last letter (on release); hold = clear the whole word.
       this.trayHold = this.time.delayedCall(input.longPressMs, () => {
         this.trayHold = undefined;

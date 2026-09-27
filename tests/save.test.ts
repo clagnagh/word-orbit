@@ -119,3 +119,23 @@ describe('ignoring saved data that does not fit', () => {
     expect(fromSaved(make(), puzzle, 7)).toBeNull();
   });
 });
+
+describe('pause', () => {
+  it('stops the clock after counting time up to the pause', () => {
+    const playing = run(newGame(puzzle), { type: 'start', now: 0 });
+    const paused = run(playing, { type: 'pause', now: 10_000 }, { type: 'tick', now: 70_000 });
+    expect(paused.remainingMs).toBe(80_000);
+    const resumed = run(paused, { type: 'resume', now: 70_000 }, { type: 'tick', now: 75_000 });
+    expect(resumed.remainingMs).toBe(75_000);
+  });
+
+  it('ends the level if time ran out before the pause', () => {
+    const playing = run(newGame(puzzle), { type: 'start', now: 0 });
+    expect(reduce(playing, { type: 'pause', now: 95_000 }).state.phase).toBe('levelEnded');
+  });
+
+  it('does nothing when not playing', () => {
+    const fresh = newGame(puzzle);
+    expect(reduce(fresh, { type: 'pause', now: 5 }).state).toBe(fresh);
+  });
+});

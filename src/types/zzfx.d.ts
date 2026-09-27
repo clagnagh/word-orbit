@@ -8,6 +8,8 @@ declare module 'zzfx' {
     sampleRate: number;
     audioContext: AudioContext;
     play(...parameters: ZzfxParams): AudioBufferSourceNode;
+    buildSamples(...parameters: ZzfxParams): number[];
+    playSamples(sampleChannels: number[][]): AudioBufferSourceNode;
   };
 
   export function zzfx(...parameters: ZzfxParams): AudioBufferSourceNode;

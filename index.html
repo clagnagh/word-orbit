@@ -2,7 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover lets the background fill behind notches; #game's padding keeps the game clear of them. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0f24" />
     <title>Word Orbit</title>
     <style>
       /* Fredoka (SIL Open Font License, see public/fonts/OFL.txt), bundled so it works offline. */
@@ -18,15 +20,53 @@
         height: 100%;
         background: linear-gradient(#0a0f24, #1b1646);
         overflow: hidden;
+        /* No pull-to-refresh, rubber-banding, text selection or long-press menus while playing. */
+        overscroll-behavior: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
       }
       #game {
+        box-sizing: border-box;
         width: 100%;
         height: 100%;
+        padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+          env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+        /* The game handles every touch itself: no double-tap zoom, pinch or scrolling. */
+        touch-action: none;
+      }
+      /* Shown on phones held sideways (see src/game/orientation.ts). */
+      #rotate-prompt {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        background: #0a0f24;
+        color: #e6e9ff;
+        font:
+          600 22px Fredoka,
+          'Trebuchet MS',
+          system-ui,
+          sans-serif;
+        text-align: center;
+      }
+      #rotate-prompt span {
+        font-size: 48px;
+        line-height: 1;
+      }
+      body.sideways #rotate-prompt {
+        display: flex;
       }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <div id="rotate-prompt" role="alert"><span>📱</span>Turn your phone upright to play</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

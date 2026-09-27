@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { tuning } from '../../config/tuning.ts';
 import { toCss } from '../color.ts';
 import { reducedMotion } from '../motion.ts';
+import { release, take } from './pool.ts';
 import type { Point } from '../hitTest.ts';
 
 export interface FlyOptions {
@@ -18,15 +19,18 @@ export interface FlyOptions {
 export function flyLetter(scene: Phaser.Scene, letter: string, options: FlyOptions): void {
   if (reducedMotion()) return;
   const { fonts, palette } = tuning;
-  const ghost = scene.add
-    .text(options.from.x, options.from.y, letter.toUpperCase(), {
-      fontFamily: fonts.family,
-      fontSize: `${options.fontSize}px`,
-      fontStyle: fonts.bold,
-      color: toCss(palette.text),
-    })
-    .setOrigin(0.5)
-    .setDepth(8);
+  const ghost = take(scene, `flyLetter:${options.fontSize}`, () =>
+    scene.add
+      .text(0, 0, '', {
+        fontFamily: fonts.family,
+        fontSize: `${options.fontSize}px`,
+        fontStyle: fonts.bold,
+        color: toCss(palette.text),
+      })
+      .setOrigin(0.5)
+      .setDepth(8),
+  );
+  ghost.setPosition(options.from.x, options.from.y).setScale(1).setText(letter.toUpperCase());
   scene.tweens.add({
     targets: ghost,
     x: options.to.x,
@@ -36,6 +40,6 @@ export function flyLetter(scene: Phaser.Scene, letter: string, options: FlyOptio
     delay: options.delayMs ?? 0,
     duration: options.ms,
     ease: options.ease,
-    onComplete: () => ghost.destroy(),
+    onComplete: () => release(ghost),
   });
 }

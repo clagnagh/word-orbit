@@ -14,6 +14,12 @@ let loading = false;
 /** Sounds asked for while the synth was still loading (the very first tap), played once it's ready. */
 let pending: (() => void)[] = [];
 let muted: boolean | null = null;
+/**
+ * Built sounds, by recipe and pitch. zzfx works out every sample of a sound each time it plays,
+ * which took several milliseconds per tap on slow phones; the game only uses a few dozen
+ * recipe/pitch pairs, so each is built once and replayed.
+ */
+const built = new Map<string, number[]>();
 
 /** Frequency multiplier for a note `semitones` above (or below) a base note. */
 export function semitoneRatio(semitones: number): number {
@@ -68,7 +74,13 @@ function play(recipe: readonly number[], pitch = 1, delayMs = 0): void {
     if (!engine || isMuted()) return;
     engine.volume = audio.masterVolume;
     try {
-      engine.play(...params);
+      const key = params.join(',');
+      let samples = built.get(key);
+      if (!samples) {
+        samples = engine.buildSamples(...params);
+        built.set(key, samples);
+      }
+      engine.playSamples([samples]);
     } catch {
       // A failed sound should never interrupt the game.
     }

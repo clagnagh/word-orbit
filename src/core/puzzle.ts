@@ -1,5 +1,4 @@
 import { seedFor } from './daily.ts';
-import { canBuildFrom } from './dictionary.ts';
 import { createRng, hashString, type Rng } from './rng.ts';
 import { LEVELS, MIN_BONUS_WORDS, MIN_WORD_LENGTH } from './rules.ts';
 
@@ -35,10 +34,35 @@ export function bonusWordCount(level: Level): number {
   return level.validWords.filter((w) => w.length < level.letters.length).length;
 }
 
+const A = 'a'.charCodeAt(0);
+
+/** Letter counts as a fixed array of 26 numbers: fast to compare, unlike a Map per word. */
+function letterArray(word: string): Uint8Array {
+  const counts = new Uint8Array(26);
+  for (let i = 0; i < word.length; i++) counts[word.charCodeAt(i) - A]!++;
+  return counts;
+}
+
+/** Same result as filtering with canBuildFrom (dictionary.ts), without building a Map per word. */
+function buildableWords(keyWord: string, words: readonly string[]): string[] {
+  const available = letterArray(keyWord);
+  const left = new Uint8Array(26); // reused for every word
+  const result: string[] = [];
+  outer: for (const word of words) {
+    if (word.length < MIN_WORD_LENGTH || word.length > keyWord.length) continue;
+    left.set(available);
+    for (let i = 0; i < word.length; i++) {
+      const c = word.charCodeAt(i) - A;
+      if (left[c] === 0) continue outer;
+      left[c]!--;
+    }
+    result.push(word);
+  }
+  return result;
+}
+
 function buildLevel(keyWord: string, rng: Rng, words: readonly string[]): Level {
-  const validWords = words
-    .filter((w) => w.length >= MIN_WORD_LENGTH && w.length <= keyWord.length)
-    .filter((w) => canBuildFrom(w, keyWord));
+  const validWords = buildableWords(keyWord, words);
   const fullWords = new Set(validWords.filter((w) => w.length === keyWord.length));
 
   // Re-shuffle until the tiles don't spell the key word (or an anagram of it) in order.
