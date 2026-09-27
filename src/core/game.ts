@@ -41,7 +41,9 @@ export type Action =
   | { type: 'submit'; now: number }
   | { type: 'tick'; now: number }
   | { type: 'nextLevel'; now: number }
-  | { type: 'hint' };
+  | { type: 'hint' }
+  /** Continue a restored game: the clock restarts from `now`; time while closed doesn't count. */
+  | { type: 'resume'; now: number };
 
 export type GameEvent =
   | { type: 'levelStarted'; level: number }
@@ -155,6 +157,10 @@ export function reduce(state: GameState, action: Action): Step {
 
     case 'hint':
       return useHint(state);
+
+    case 'resume':
+      if (state.phase !== 'playing' || state.lastTickAt !== null) return unchanged(state);
+      return { state: { ...state, lastTickAt: action.now }, events: [] };
 
     case 'submit': {
       const timed = advanceTime(state, action.now);

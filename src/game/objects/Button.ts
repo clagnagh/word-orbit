@@ -10,8 +10,10 @@ export function createButton(
   y: number,
   label: string,
   onClick: () => void,
+  width: number = layout.menu.buttonWidth,
 ): Phaser.GameObjects.Container {
-  const { buttonWidth: w, buttonHeight: h, buttonCornerRadius: r } = layout.menu;
+  const { buttonHeight: h, buttonCornerRadius: r } = layout.menu;
+  const w = width;
   const bg = scene.add
     .graphics()
     .fillStyle(palette.planet, 1)

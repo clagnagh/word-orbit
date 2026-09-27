@@ -62,13 +62,31 @@ export const tuning = {
       buttonHoverScale: 1.04,
     },
     results: {
-      titleY: 140,
-      scoreY: 240,
-      levelsY: 380,
-      levelSpacing: 84,
-      card: { y: 800, width: 560, height: 250, cornerRadius: 28 },
+      titleY: 100,
+      scoreY: 190,
+      levelsY: 300,
+      levelSpacing: 62,
+      /** Played · Streak · Best, as three columns. */
+      stats: { valueY: 520, labelY: 562, columnsX: [170, 360, 550] },
+      /** Bar chart of recent scores; today's bar uses the accent colour. */
+      chart: {
+        titleY: 632,
+        top: 664,
+        height: 110,
+        width: 520,
+        maxBars: 14,
+        barGap: 8,
+        cornerRadius: 4,
+        pastAlpha: 0.55,
+      },
+      card: { y: 915, width: 560, height: 200, cornerRadius: 28 },
       shareLineSpacing: 10,
       buttonY: 1120,
+      /** Share and Menu sit side by side. */
+      buttonsX: [205, 515],
+      buttonWidth: 280,
+      previewNote: 'Preview games are not saved',
+      previewNoteY: 560,
     },
   },
 
@@ -142,6 +160,41 @@ export const tuning = {
 
   /** hitSize is the invisible tap area: bigger than the drawn button so it's easy to hit (≥ 48 px on a phone). */
   muteButton: { x: 668, y: 1228, radius: 30, hitSize: 100, iconSize: 14, lineWidth: 4 },
+  /** The "?" button on the Menu mirrors the mute button in the bottom-left corner. */
+  helpButton: { x: 52, y: 1228, fontSize: 34 },
+
+  /** The daily loop: menu status, countdown, saving. */
+  daily: {
+    statusY: 1060,
+    countdownPrefix: 'NEXT PUZZLE IN',
+    playedLabel: 'PLAYED ✓',
+    /** Also saved after every word and level change; this covers the timer in between. */
+    saveIntervalMs: 2_000,
+  },
+
+  toast: { y: 1030, height: 64, paddingX: 32, ms: 1_600, fadeMs: 200, fontSize: 30 },
+
+  howToPlay: {
+    title: 'How to play',
+    lines: [
+      'Tap the orbiting letters to spell a word.',
+      'Tap the planet to submit it. Words need 3+ letters.',
+      'Find the key word that uses every letter to finish the level early.',
+      'Complete each level’s goal for bonus points.',
+      'A new puzzle every day. Come back tomorrow!',
+    ],
+    panel: { y: 640, width: 620, height: 820, cornerRadius: 32 },
+    titleY: 300,
+    firstLineY: 380,
+    lineSpacing: 104,
+    lineWidth: 480,
+    numberX: 110,
+    textX: 160,
+    buttonY: 960,
+    dimAlpha: 0.82,
+    titleSize: 48,
+    lineSize: 30,
+  },
 
   /** The mini-goal line under the combo, and the hint glow. (Rule numbers are in core/rules.ts.) */
   goal: {
