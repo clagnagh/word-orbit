@@ -15,6 +15,10 @@ export interface LevelProgress {
   readonly score: number;
   readonly goalDone: boolean;
   readonly hintUsed: boolean;
+  /** How far into the level the key word was found, in ms. Missing until it is found. */
+  readonly keyWordAtMs?: number;
+  /** Highest combo reached on this level, in tenths. Missing until a word is accepted. */
+  readonly bestComboTenths?: number;
 }
 
 export interface GameState {
@@ -294,6 +298,8 @@ function judgeWord(state: GameState, now: number): Step {
     keyWordFound: progress.keyWordFound || isKey,
     goalDone: progress.goalDone || goalNowDone,
     score: progress.score + points + bonus + goalBonus,
+    bestComboTenths: Math.max(progress.bestComboTenths ?? 0, comboTenths),
+    ...(isKey ? { keyWordAtMs: timeLimit(state.levelIndex) - state.remainingMs } : {}),
   };
   const next: GameState = {
     ...state,

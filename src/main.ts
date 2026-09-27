@@ -4,11 +4,15 @@ import { installAudioUnlock } from './game/audio.ts';
 import { installRotatePrompt } from './game/orientation.ts';
 import { MenuScene } from './game/scenes/MenuScene.ts';
 import { PlayScene } from './game/scenes/PlayScene.ts';
+import { ArchiveScene } from './game/scenes/ArchiveScene.ts';
 import { ResultsScene } from './game/scenes/ResultsScene.ts';
+import { loadTheme } from './game/session.ts';
+import { applyTheme } from './game/theme.ts';
 
 function startGame(): void {
   installAudioUnlock();
   installRotatePrompt();
+  applyTheme(loadTheme());
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game',
@@ -21,7 +25,7 @@ function startGame(): void {
       width: tuning.layout.width,
       height: tuning.layout.height,
     },
-    scene: [MenuScene, PlayScene, ResultsScene],
+    scene: [MenuScene, PlayScene, ResultsScene, ArchiveScene],
   });
 
   // Dev builds only: the tuning panel, and a handle for browser tests and the console.

@@ -37,7 +37,13 @@ import { Planet } from '../objects/Planet.ts';
 import { TimerRing, timerColor } from '../objects/TimerRing.ts';
 import { Tray } from '../objects/Tray.ts';
 import { isSideways, onSidewaysChange } from '../orientation.ts';
-import { recordFinishedGame, saveGame } from '../session.ts';
+import {
+  loadPlayerStats,
+  recordFinishedDay,
+  recordFinishedGame,
+  saveArchiveGame,
+  saveGame,
+} from '../session.ts';
 import type { ResultsData } from './ResultsScene.ts';
 
 const { fonts, fx, input, layout, orbit, palette, timing } = tuning;
@@ -45,6 +51,8 @@ const { fonts, fx, input, layout, orbit, palette, timing } = tuning;
 export interface PlayData {
   puzzleNumber: number;
   isPreview: boolean;
+  /** A past day played from the archive: saved separately, and never changes stats. */
+  isArchive?: boolean;
   puzzle: Puzzle;
   /** A saved game to continue instead of starting fresh. */
   resume?: GameState;
@@ -185,21 +193,31 @@ export class PlayScene extends Phaser.Scene {
 
   /** Saves today's game (not the preview puzzle, which must stay playable on launch day). */
   private save(): void {
-    if (this.playData.isPreview) return;
+    const { isPreview, isArchive, puzzleNumber } = this.playData;
+    if (isPreview) return;
     this.sinceSaveMs = 0;
-    saveGame(this.state, this.playData.puzzleNumber);
+    if (isArchive) saveArchiveGame(this.state, puzzleNumber);
+    else saveGame(this.state, puzzleNumber);
   }
 
   private goToResults(): void {
     this.save(); // the finished game, so the menu offers "See results" instead of replaying
-    const { puzzleNumber, isPreview } = this.playData;
+    const { puzzleNumber, isPreview, isArchive = false } = this.playData;
     const summary = summarize(this.state);
+    // Archive games leave the daily stats alone; the preview isn't recorded at all.
+    const stats = isPreview
+      ? null
+      : isArchive
+        ? loadPlayerStats()
+        : recordFinishedGame(puzzleNumber, summary.score);
     const data: ResultsData = {
       puzzleNumber,
       isPreview,
+      isArchive,
       puzzle: this.state.puzzle,
       summary,
-      stats: isPreview ? null : recordFinishedGame(puzzleNumber, summary.score),
+      stats,
+      newAchievements: stats ? recordFinishedDay(this.state, puzzleNumber, stats, isArchive) : [],
     };
     this.scene.start('Results', data);
   }

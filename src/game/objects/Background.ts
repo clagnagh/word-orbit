@@ -4,7 +4,7 @@ import { toCss } from '../color.ts';
 import { reducedMotion } from '../motion.ts';
 
 const { background, layout, palette } = tuning;
-const TEXTURE_KEY = 'sky-gradient';
+export const SKY_TEXTURE = 'sky-gradient';
 
 interface Star {
   readonly dot: Phaser.GameObjects.Arc;
@@ -19,8 +19,8 @@ export class Background {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-    if (!scene.textures.exists(TEXTURE_KEY)) createGradientTexture(scene);
-    scene.add.image(0, 0, TEXTURE_KEY).setOrigin(0);
+    if (!scene.textures.exists(SKY_TEXTURE)) createGradientTexture(scene);
+    scene.add.image(0, 0, SKY_TEXTURE).setOrigin(0);
 
     for (const layer of background.starLayers) {
       for (let i = 0; i < layer.count; i++) {
@@ -65,7 +65,7 @@ export class Background {
 }
 
 function createGradientTexture(scene: Phaser.Scene): void {
-  const texture = scene.textures.createCanvas(TEXTURE_KEY, layout.width, layout.height);
+  const texture = scene.textures.createCanvas(SKY_TEXTURE, layout.width, layout.height);
   const ctx = texture?.getContext();
   if (!texture || !ctx) return;
   const gradient = ctx.createLinearGradient(0, 0, 0, layout.height);

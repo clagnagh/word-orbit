@@ -296,10 +296,10 @@ Juice means small effects that make actions feel satisfying.
 
 ### Milestone 8.6 — Reasons to come back
 
-- [ ] Achievements (about 10 badges), checked in `src/core/`, saved in the browser, with a toast when earned and a 🏆 panel on the menu.
-- [ ] Puzzle archive: a 📅 calendar of every day since launch, coloured by result; past days can be played without changing the streak or daily stats.
-- [ ] Themes: Classic, Mars, Ice and Neon (background, planet, stars, glow), unlocked by streaks and achievements, chosen from a 🎨 panel and remembered.
-- [ ] Menu bottom row: ? 🏆 📅 🎨 🔊, every button at least the minimum tap size.
+- [x] Achievements (about 10 badges), checked in `src/core/`, saved in the browser, with a toast when earned and a 🏆 panel on the menu.
+- [x] Puzzle archive: a 📅 calendar of every day since launch, coloured by result; past days can be played without changing the streak or daily stats.
+- [x] Themes: Classic, Mars, Ice and Neon (background, planet, stars, glow), unlocked by streaks and achievements, chosen from a 🎨 panel and remembered.
+- [x] Menu bottom row: ? 🏆 📅 🎨 🔊, every button at least the minimum tap size.
 
 **Done when:** I've earned a badge, played a past day from the calendar, and switched theme on my phone.
 **Explain to me:** deriving achievements from data instead of tracking flags everywhere, save-data versions, and theming through a palette.

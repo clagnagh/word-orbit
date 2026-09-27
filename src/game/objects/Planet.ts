@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { tuning } from '../../config/tuning.ts';
 
 const { palette, planet } = tuning;
-const GLOW_TEXTURE = 'planet-glow';
+export const GLOW_TEXTURE = 'planet-glow';
 const GLOW_TEXTURE_SIZE = 256;
 
 /** The glowing planet. Its ✓ brightens when the current word is long enough to submit. */
