@@ -96,6 +96,11 @@ export const tuning = {
     planetHitPadding: 20,
     /** Hold the tray this long to clear it. */
     longPressMs: 500,
+    /**
+     * Smallest tap area for buttons and the tray, in design pixels. 112 is 48 px (the usual
+     * minimum for fingers) even on the smallest 320 px-wide phones.
+     */
+    minTapSize: 112,
   },
 
   orbit: {
@@ -159,7 +164,7 @@ export const tuning = {
   },
 
   /** hitSize is the invisible tap area: bigger than the drawn button so it's easy to hit (≥ 48 px on a phone). */
-  muteButton: { x: 668, y: 1228, radius: 30, hitSize: 100, iconSize: 14, lineWidth: 4 },
+  muteButton: { x: 668, y: 1228, radius: 30, hitSize: 112, iconSize: 14, lineWidth: 4 },
   /** The "?" button on the Menu mirrors the mute button in the bottom-left corner. */
   helpButton: { x: 52, y: 1228, fontSize: 34 },
 
@@ -199,7 +204,7 @@ export const tuning = {
   /** The mini-goal line under the combo, and the hint glow. (Rule numbers are in core/rules.ts.) */
   goal: {
     y: 212,
-    fontSize: 22,
+    fontSize: 24,
     /** Goal-complete sound: a quick rise of these semitones above the note recipe. */
     notes: [0, 7, 12],
     gapMs: 60,
@@ -297,7 +302,7 @@ export const tuning = {
     shadowAlpha: 0.35,
     selectedRingWidth: 4,
     selectedLetterAlpha: 0.45,
-    badgeRadius: 15,
+    badgeRadius: 17,
     badgeOffset: 32,
   },
 
@@ -314,11 +319,12 @@ export const tuning = {
     title: 88,
     subtitle: 30,
     button: 42,
-    hudLabel: 20,
+    /** The smallest text: 24 design px is 12 px on a 360 px-wide phone. */
+    hudLabel: 24,
     hudValue: 38,
     combo: 30,
     tile: 44,
-    tileBadge: 18,
+    tileBadge: 22,
     tray: 56,
     message: 34,
     foundHeader: 24,

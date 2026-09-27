@@ -62,3 +62,26 @@ function addSlider(folder: GUI, obj: Tunable, key: string, value: number): void 
 function isObject(value: unknown): value is Tunable {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
+
+/** A small frames-per-second readout in the top-left corner (dev builds only). */
+export function installFpsMeter(game: Phaser.Game): void {
+  const meter = document.createElement('div');
+  Object.assign(meter.style, {
+    position: 'fixed',
+    top: '4px',
+    left: '4px',
+    padding: '2px 6px',
+    font: '12px ui-monospace, Menlo, Consolas, monospace',
+    color: '#7be08a',
+    background: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: '4px',
+    pointerEvents: 'none',
+    zIndex: '20',
+  });
+  document.body.appendChild(meter);
+  window.setInterval(() => {
+    const fps = Math.round(game.loop.actualFps);
+    meter.textContent = `${fps} fps`;
+    meter.style.color = fps >= 55 ? '#7be08a' : fps >= 30 ? '#ffc970' : '#ff7a7a';
+  }, 500);
+}

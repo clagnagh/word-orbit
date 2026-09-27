@@ -34,28 +34,33 @@ export class FoundWords {
 
     const left = totalWords - words.length;
     this.header.setText(`FOUND ${words.length}  ·  ${left} TO FIND`);
-    this.pills.removeAll(true);
-    this.pillByWord.clear();
+    // Keep pills for words already shown; only a new word needs a new pill (drawing text is the
+    // slow part). Pills for words no longer listed (a new level) are removed.
+    const wanted = new Set(words);
+    for (const [word, pill] of this.pillByWord) {
+      if (!wanted.has(word)) {
+        pill.destroy();
+        this.pillByWord.delete(word);
+      }
+    }
+    for (const pill of this.pillByWord.values()) pill.setVisible(false);
 
     const rows: Phaser.GameObjects.Container[][] = [[]];
     const rowWidths = [0];
     for (const word of [...words].reverse()) {
-      const pill = this.makePill(word);
+      const pill = this.pillByWord.get(word) ?? this.makePill(word);
       const width = pill.width;
       let row = rows.length - 1;
       const limit = row === area.maxRows - 1 ? area.lastRowWidth : area.width;
       const needed = rowWidths[row]! + (rows[row]!.length ? area.pillGap : 0) + width;
       if (needed > limit) {
-        if (rows.length === area.maxRows) {
-          pill.destroy();
-          break;
-        }
+        if (rows.length === area.maxRows) break; // no room: older words stay hidden
         rows.push([]);
         rowWidths.push(0);
         row++;
       }
       rowWidths[row]! += (rows[row]!.length ? area.pillGap : 0) + width;
-      rows[row]!.push(pill);
+      rows[row]!.push(pill.setVisible(true));
     }
 
     rows.forEach((row, r) => {
@@ -82,7 +87,7 @@ export class FoundWords {
       .graphics()
       .fillStyle(palette.panel, 1)
       .fillRoundedRect(-width / 2, -h / 2, width, h, h / 2);
-    const pill = this.scene.add.container(0, 0, [bg, text]).setSize(width, h);
+    const pill = this.scene.add.container(0, 0, [bg, text]).setSize(width, h).setVisible(false);
     this.pillByWord.set(word, pill);
     this.pills.add(pill);
     return pill;

@@ -1,12 +1,14 @@
 import Phaser from 'phaser';
 import { tuning } from './config/tuning.ts';
 import { installAudioUnlock } from './game/audio.ts';
+import { installRotatePrompt } from './game/orientation.ts';
 import { MenuScene } from './game/scenes/MenuScene.ts';
 import { PlayScene } from './game/scenes/PlayScene.ts';
 import { ResultsScene } from './game/scenes/ResultsScene.ts';
 
 function startGame(): void {
   installAudioUnlock();
+  installRotatePrompt();
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game',
@@ -26,7 +28,10 @@ function startGame(): void {
   // Production builds drop this block, and lil-gui with it.
   if (import.meta.env.DEV) {
     Object.assign(window, { wordOrbit: game });
-    void import('./game/debugPanel.ts').then((panel) => panel.installDebugPanel(game));
+    void import('./game/debugPanel.ts').then((panel) => {
+      panel.installDebugPanel(game);
+      panel.installFpsMeter(game);
+    });
   }
 }
 

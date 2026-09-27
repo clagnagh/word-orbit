@@ -43,7 +43,9 @@ export type Action =
   | { type: 'nextLevel'; now: number }
   | { type: 'hint' }
   /** Continue a restored game: the clock restarts from `now`; time while closed doesn't count. */
-  | { type: 'resume'; now: number };
+  | { type: 'resume'; now: number }
+  /** Stop the clock (e.g. the page is hidden). Time up to `now` still counts. */
+  | { type: 'pause'; now: number };
 
 export type GameEvent =
   | { type: 'levelStarted'; level: number }
@@ -157,6 +159,12 @@ export function reduce(state: GameState, action: Action): Step {
 
     case 'hint':
       return useHint(state);
+
+    case 'pause': {
+      const timed = advanceTime(state, action.now);
+      if (timed.state.phase !== 'playing') return timed;
+      return { state: { ...timed.state, lastTickAt: null }, events: timed.events };
+    }
 
     case 'resume':
       if (state.phase !== 'playing' || state.lastTickAt !== null) return unchanged(state);

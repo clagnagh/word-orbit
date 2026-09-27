@@ -25,7 +25,7 @@ describe('shareText', () => {
     expect(text).toBe('Word Orbit #42 🪐\n🟩🟩🟨\n1,240 pts · 9 words · 🔥3\nwordorbit.example');
   });
 
-  it('shows 🟥 for a level with no words, and "1 word" in the singular', () => {
+  it('shows ⬛ for a level with no words, and "1 word" in the singular', () => {
     const text = shareText(
       7,
       summary(
@@ -38,7 +38,7 @@ describe('shareText', () => {
       ),
       1,
     );
-    expect(text).toBe('Word Orbit #7 🪐\n🟨🟥🟥\n90 pts · 1 word · 🔥1\nwordorbit.example');
+    expect(text).toBe('Word Orbit #7 🪐\n🟨⬛⬛\n90 pts · 1 word · 🔥1\nwordorbit.example');
   });
 
   it('uses a custom URL when given', () => {

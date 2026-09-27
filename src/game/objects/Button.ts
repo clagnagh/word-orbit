@@ -26,7 +26,10 @@ export function createButton(
       color: toCss(palette.tileText),
     })
     .setOrigin(0.5);
-  const button = scene.add.container(x, y, [bg, text]).setSize(w, h);
+  // The tap area can be taller than the drawn button, so it's easy to hit on small phones.
+  const button = scene.add
+    .container(x, y, [bg, text])
+    .setSize(w, Math.max(h, tuning.input.minTapSize));
   button
     .setInteractive({ useHandCursor: true })
     .on('pointerup', onClick)

@@ -71,7 +71,7 @@ wordorbit.example
 
 - 🟩 = found the key word
 - 🟨 = found at least one word, but not the key word
-- 🟥 = found nothing
+- ⬛ = found nothing (black rather than red, so it reads with colour blindness)
 - 🔥 = current daily streak
 
 The share must **never reveal the answers**.
@@ -273,12 +273,12 @@ Juice means small effects that make actions feel satisfying.
 
 ### Milestone 8 — Mobile, accessibility & performance
 
-- [ ] Test at several screen sizes (small phone, tall phone, tablet, desktop). Handle safe areas and resizing, and prevent pull-to-refresh or zoom on double-tap.
-- [ ] Touch targets are at least 48 px on screen, and tiles never overlap the tray or UI.
-- [ ] Colour-blind-friendly feedback: never rely on colour alone. Add icons or shapes for right/wrong.
-- [ ] Performance: steady 60 fps on a mid-range phone. Limit particle counts, reuse objects, and show an FPS readout in dev.
-- [ ] Pause when the browser tab is hidden (the timer pauses too).
-- [ ] Build size check: report the final size of the gzipped bundle.
+- [x] Test at several screen sizes (small phone, tall phone, tablet, desktop). Handle safe areas and resizing, and prevent pull-to-refresh or zoom on double-tap. _Phones held sideways get a "turn your phone upright" prompt, and the timer pauses._
+- [x] Touch targets are at least 48 px on screen, and tiles never overlap the tray or UI. _50 px on a 320 px-wide phone; `tests/layout.test.ts` checks the overlaps._
+- [x] Colour-blind-friendly feedback: never rely on colour alone. Add icons or shapes for right/wrong.
+- [x] Performance: steady 60 fps on a mid-range phone. Limit particle counts, reuse objects, and show an FPS readout in dev. _Measured on a simulated slow CPU; confirm on a real phone._
+- [x] Pause when the browser tab is hidden (the timer pauses too).
+- [x] Build size check: report the final size of the gzipped bundle. _~485 KB gzipped JS (Phaser ~355, word lists ~130, game ~15) plus a 29 KB font._
 
 **Done when:** I've played a full game on my own phone with no layout or performance problems.
 **Explain to me:** responsive scaling in Phaser, object pooling, and what gzip size means for load time.

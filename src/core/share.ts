@@ -2,10 +2,13 @@ import type { GameSummary } from './game.ts';
 
 export const SHARE_URL = 'wordorbit.example';
 
-/** 🟩 found the key word · 🟨 found some words · 🟥 found nothing. */
+/**
+ * 🟩 found the key word · 🟨 found some words · ⬛ found nothing.
+ * ⬛ differs from the others in brightness, not just colour, so it reads with colour blindness.
+ */
 function levelSquare(level: GameSummary['levels'][number]): string {
   if (level.keyWordFound) return '🟩';
-  return level.wordCount > 0 ? '🟨' : '🟥';
+  return level.wordCount > 0 ? '🟨' : '⬛';
 }
 
 /**
