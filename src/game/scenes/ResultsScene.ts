@@ -1,16 +1,19 @@
 import Phaser from 'phaser';
 import { tuning } from '../../config/tuning.ts';
+import { achievement, type AchievementId } from '../../core/achievements.ts';
 import { wordOfTheDay } from '../../core/definitions.ts';
 import type { GameSummary } from '../../core/game.ts';
 import type { Puzzle } from '../../core/puzzle.ts';
 import { shareText } from '../../core/share.ts';
 import { displayStreak, isNewBest, type Stats } from '../../core/stats.ts';
+import { sfx } from '../audio.ts';
 import { toCss } from '../color.ts';
 import { loadDefinitions } from '../definitions.ts';
 import { Background } from '../objects/Background.ts';
 import { createButton } from '../objects/Button.ts';
 import { drawStatsPanel } from '../objects/StatsPanel.ts';
 import { showToast } from '../objects/Toast.ts';
+import { todaysPuzzle } from '../session.ts';
 import { shareResult } from '../share.ts';
 
 const { fonts, layout, palette } = tuning;
@@ -19,10 +22,14 @@ const { results } = layout;
 export interface ResultsData {
   puzzleNumber: number;
   isPreview: boolean;
+  /** A past day played from the archive. */
+  isArchive?: boolean;
   puzzle: Puzzle;
   summary: GameSummary;
   /** The player's stats including this game, or null for the (unsaved) preview puzzle. */
   stats: Stats | null;
+  /** Achievements this game earned for the first time, announced one after another. */
+  newAchievements?: readonly AchievementId[];
 }
 
 const SHARE_MESSAGES = {
@@ -56,7 +63,9 @@ export class ResultsScene extends Phaser.Scene {
 
     text(
       results.titleY,
-      data.isPreview ? 'PREVIEW COMPLETE' : `PUZZLE #${data.puzzleNumber} COMPLETE`,
+      data.isPreview
+        ? 'PREVIEW COMPLETE'
+        : `${data.isArchive ? 'ARCHIVE' : 'PUZZLE'} #${data.puzzleNumber} COMPLETE`,
       fonts.subtitle,
       palette.dimText,
       fonts.regular,
@@ -69,7 +78,8 @@ export class ResultsScene extends Phaser.Scene {
       fonts.bold,
     );
 
-    const newBest = data.stats ? isNewBest(data.stats, data.puzzleNumber) : false;
+    const newBest =
+      data.stats && !data.isArchive ? isNewBest(data.stats, data.puzzleNumber) : false;
     if (newBest) {
       text(
         results.newBestY,
@@ -94,13 +104,15 @@ export class ResultsScene extends Phaser.Scene {
       );
     });
 
-    const streak = data.stats ? displayStreak(data.stats, data.puzzleNumber) : 0;
-    if (data.stats) {
+    // An archive game is a past day, but the streak shown is today's.
+    const streakDay = data.isArchive ? todaysPuzzle().puzzleNumber : data.puzzleNumber;
+    const streak = data.stats ? displayStreak(data.stats, streakDay) : 0;
+    if (data.stats && !data.isArchive) {
       drawStatsPanel(this, data.stats, streak, data.puzzleNumber);
     } else {
       text(
         results.previewNoteY,
-        results.previewNote,
+        data.isArchive ? results.archiveNote : results.previewNote,
         fonts.hudLabel,
         palette.dimText,
         fonts.regular,
@@ -147,10 +159,25 @@ export class ResultsScene extends Phaser.Scene {
       this,
       menuX ?? cx,
       results.buttonY,
-      'Menu',
-      () => this.scene.start('Menu'),
+      data.isArchive ? 'Archive' : 'Menu',
+      () => this.scene.start(data.isArchive ? 'Archive' : 'Menu'),
       results.buttonWidth,
     );
+
+    this.announceAchievements(data.newAchievements ?? []);
+  }
+
+  /** "🏆 Key Master", one toast after another, each with a little fanfare. */
+  private announceAchievements(ids: readonly AchievementId[]): void {
+    const { toast } = tuning;
+    const each = toast.ms + toast.fadeMs * 2 + results.achievementGapMs;
+    ids.forEach((id, i) => {
+      this.time.delayedCall(results.achievementDelayMs + i * each, () => {
+        const { icon, title } = achievement(id);
+        sfx.goal();
+        showToast(this, `🏆 ${icon} ${title}`, results.achievementToastY);
+      });
+    });
   }
 
   /** Fades in once the definitions have loaded; its space is kept free until then. */

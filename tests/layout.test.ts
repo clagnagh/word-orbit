@@ -1,6 +1,7 @@
 // Checks the layout numbers in tuning.ts: orbiting tiles must never overlap the UI around them.
 import { describe, expect, it } from 'vitest';
 import { tuning } from '../src/config/tuning';
+import { ACHIEVEMENTS } from '../src/core/achievements';
 
 const { fonts, fx, hint, input, layout } = tuning;
 const { planet } = layout;
@@ -53,5 +54,39 @@ describe('play screen layout', () => {
     const { foundWords } = layout;
     const lastRow = foundWords.firstRowY + (foundWords.maxRows - 1) * foundWords.rowSpacing;
     expect(lastRow + foundWords.pillHeight / 2).toBeLessThanOrEqual(layout.height);
+  });
+});
+
+describe('menu and archive layout', () => {
+  it('spaces the menu buttons so their tap areas never overlap', () => {
+    const { menuBar, muteButton } = tuning;
+    const xs = [
+      menuBar.helpX,
+      menuBar.achievementsX,
+      menuBar.archiveX,
+      menuBar.themesX,
+      muteButton.x,
+    ];
+    xs.slice(1).forEach((x, i) => expect(x - xs[i]!).toBeGreaterThanOrEqual(input.minTapSize));
+    expect(xs[0]! - input.minTapSize / 2).toBeGreaterThanOrEqual(0);
+    expect(xs.at(-1)! + input.minTapSize / 2).toBeLessThanOrEqual(layout.width);
+  });
+
+  it('fits a six-week month, the legend and the hint above the Menu button', () => {
+    const { archive } = tuning;
+    expect(7 * archive.cell + 6 * archive.gap).toBeLessThanOrEqual(layout.width);
+    const lastRowBottom = archive.firstRowY + 5 * archive.rowSpacing + archive.cell / 2;
+    expect(lastRowBottom).toBeLessThan(archive.legendY[0]! - archive.legendSquare / 2);
+    expect(archive.hintY).toBeLessThan(
+      archive.buttonY - layout.menu.buttonHeight / 2 - fonts.credit,
+    );
+  });
+
+  it('keeps every achievement row inside its panel, above the Close button', () => {
+    const { achievementsPanel: a } = tuning;
+    const lastRow =
+      a.firstRowY + (ACHIEVEMENTS.length - 1) * a.rowSpacing + a.lineOffset + a.descriptionSize / 2;
+    expect(lastRow).toBeLessThan(a.buttonY - layout.menu.buttonHeight / 2);
+    expect(a.panel.y + a.panel.height / 2).toBeLessThanOrEqual(layout.height);
   });
 });

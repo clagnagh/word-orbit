@@ -68,8 +68,15 @@ function isProgress(p: unknown, validWords: readonly string[]): p is LevelProgre
     typeof p.keyWordFound === 'boolean' &&
     typeof p.goalDone === 'boolean' &&
     typeof p.hintUsed === 'boolean' &&
-    Number.isInteger(p.score)
+    Number.isInteger(p.score) &&
+    // Added later: optional, so saves from older builds still load.
+    (p.keyWordAtMs === undefined || isCount(p.keyWordAtMs)) &&
+    (p.bestComboTenths === undefined || isCount(p.bestComboTenths))
   );
+}
+
+function isCount(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

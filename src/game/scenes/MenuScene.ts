@@ -8,23 +8,30 @@ import { toCss } from '../color.ts';
 import { orbitPositions } from '../hitTest.ts';
 import { Background } from '../objects/Background.ts';
 import { createButton } from '../objects/Button.ts';
+import { AchievementsPanel } from '../objects/AchievementsPanel.ts';
 import { HelpOverlay } from '../objects/HelpOverlay.ts';
+import { createIconButton } from '../objects/IconButton.ts';
 import { LetterTile } from '../objects/LetterTile.ts';
 import { MuteButton } from '../objects/MuteButton.ts';
+import type { Overlay } from '../objects/Overlay.ts';
 import { Planet } from '../objects/Planet.ts';
+import { ThemePanel } from '../objects/ThemePanel.ts';
 import {
   hasSeenHelp,
+  loadAchievements,
   loadGame,
   loadPlayerStats,
   markHelpSeen,
+  saveTheme,
   today,
   todaysPuzzle,
 } from '../session.ts';
+import { applyTheme, currentTheme } from '../theme.ts';
 import { wordLists } from '../wordLists.ts';
 import type { PlayData } from './PlayScene.ts';
 import type { ResultsData } from './ResultsScene.ts';
 
-const { daily, fonts, layout, muteButton, orbit, palette } = tuning;
+const { daily, fonts, layout, menuBar, orbit, palette } = tuning;
 const { menu } = layout;
 const MENU_ORBIT_LETTERS = 'orbit';
 
@@ -42,7 +49,8 @@ export class MenuScene extends Phaser.Scene {
   private statusText?: Phaser.GameObjects.Text;
   private statusPrefix = '';
   private statusSuffix = '';
-  private help: HelpOverlay | null = null;
+  /** The open panel (help, achievements or themes), if any. */
+  private overlay: Overlay | null = null;
 
   constructor() {
     super('Menu');
@@ -52,7 +60,7 @@ export class MenuScene extends Phaser.Scene {
     const { puzzleNumber, isPreview } = todaysPuzzle();
     const cx = layout.width / 2;
     const launch = new Date(LAUNCH_DATE.year, LAUNCH_DATE.month - 1, LAUNCH_DATE.day);
-    this.help = null;
+    this.overlay = null;
 
     this.background = new Background(this);
 
@@ -163,13 +171,13 @@ export class MenuScene extends Phaser.Scene {
     }
 
     new MuteButton(this);
-    this.createHelpButton();
+    this.createMenuBar();
     if (!hasSeenHelp()) this.openHelp();
 
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement) return;
       if (event.key !== 'Enter' || event.repeat) return;
-      if (this.help) this.help.close();
+      if (this.overlay) this.overlay.close();
       else primary?.();
     };
     window.addEventListener('keydown', onKey);
@@ -194,32 +202,51 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
-  private createHelpButton(): void {
-    const { x, y, fontSize } = tuning.helpButton;
-    const bg = this.add
-      .circle(0, 0, muteButton.radius, palette.panel)
-      .setStrokeStyle(layout.tray.strokeWidth, palette.panelStroke);
-    const mark = this.add
-      .text(0, 0, '?', {
-        fontFamily: fonts.family,
-        fontSize: `${fontSize}px`,
-        fontStyle: fonts.bold,
-        color: toCss(palette.text),
-      })
-      .setOrigin(0.5);
-    this.add
-      .container(x, y, [bg, mark])
-      .setSize(muteButton.hitSize, muteButton.hitSize)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerup', () => this.openHelp());
+  /** The bottom row: ? 🏆 📅 🎨, with the mute button (its own object) on the right. */
+  private createMenuBar(): void {
+    const { y } = menuBar;
+    createIconButton(this, menuBar.helpX, y, '?', () => this.openHelp());
+    const emoji = (x: number, label: string, onTap: () => void) =>
+      createIconButton(this, x, y, label, onTap, menuBar.emojiSize);
+    emoji(menuBar.achievementsX, '🏆', () => this.openAchievements());
+    emoji(menuBar.archiveX, '📅', () => this.scene.start('Archive'));
+    emoji(menuBar.themesX, '🎨', () => this.openThemes());
+  }
+
+  /** Opens a panel unless one is already open; `onClose` runs after it closes. */
+  private openOverlay(make: (onClose: () => void) => Overlay, onClose?: () => void): void {
+    if (this.overlay) return;
+    this.overlay = make(() => {
+      this.overlay = null;
+      onClose?.();
+    });
   }
 
   private openHelp(): void {
-    if (this.help) return;
-    this.help = new HelpOverlay(this, () => {
-      this.help = null;
-      markHelpSeen();
-    });
+    this.openOverlay((close) => new HelpOverlay(this, close), markHelpSeen);
+  }
+
+  private openAchievements(): void {
+    this.openOverlay((close) => new AchievementsPanel(this, loadAchievements(), close));
+  }
+
+  private openThemes(): void {
+    this.openOverlay(
+      (close) =>
+        new ThemePanel(
+          this,
+          currentTheme(),
+          loadPlayerStats(),
+          loadAchievements(),
+          (id) => {
+            applyTheme(id, this.textures);
+            saveTheme(id);
+            // Everything on screen was drawn in the old colours: rebuild the menu.
+            this.scene.restart();
+          },
+          close,
+        ),
+    );
   }
 
   private placeTiles(): void {

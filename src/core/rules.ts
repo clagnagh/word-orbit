@@ -39,3 +39,12 @@ export const GOAL = {
 export const HINT = {
   cost: 100,
 } as const;
+
+/** What it takes to earn the achievements in core/achievements.ts. */
+export const ACHIEVEMENT_TARGETS = {
+  quickDrawMs: 10_000,
+  wordsmithWords: 20,
+  onFireComboTenths: 15,
+  weekStreak: 7,
+  monthStreak: 30,
+} as const;

@@ -22,8 +22,49 @@ const palette = {
   bad: 0xff7a7a,
 } as const;
 
+type ThemeColors = Partial<Record<keyof typeof palette, number>>;
+
+/**
+ * Colour themes: the palette colours each one replaces (Classic is the palette above).
+ * Which themes exist and how they unlock is in src/core/themes.ts.
+ */
+const themes: Record<'classic' | 'mars' | 'ice' | 'neon', ThemeColors> = {
+  classic: {},
+  mars: {
+    skyTop: 0x1c0a0c,
+    skyBottom: 0x4a1c16,
+    star: 0xffdcc8,
+    planet: 0xe8794a,
+    planetGlow: 0xff8a50,
+    panel: 0x2a1113,
+    panelStroke: 0x6a3128,
+    dimText: 0xc4a097,
+  },
+  ice: {
+    skyTop: 0x061626,
+    skyBottom: 0x14395c,
+    star: 0xe8f7ff,
+    planet: 0xa9e4ff,
+    planetGlow: 0x9fdcff,
+    panel: 0x0c2036,
+    panelStroke: 0x2f5a80,
+    dimText: 0x93b3cf,
+  },
+  neon: {
+    skyTop: 0x0d0221,
+    skyBottom: 0x2d0a4e,
+    star: 0xffb3f5,
+    planet: 0xff5cd9,
+    planetGlow: 0xff5cd9,
+    panel: 0x1d0838,
+    panelStroke: 0x5b2a86,
+    dimText: 0xb592d4,
+  },
+};
+
 export const tuning = {
   palette,
+  themes,
 
   layout: {
     width: 720,
@@ -103,6 +144,11 @@ export const tuning = {
       buttonsX: [205, 515],
       buttonWidth: 280,
       previewNote: 'Preview games are not saved',
+      archiveNote: 'Archive games don’t change your streak',
+      /** New achievements pop up over the title, one at a time, after the screen settles. */
+      achievementToastY: 70,
+      achievementDelayMs: 700,
+      achievementGapMs: 150,
       previewNoteY: 664,
     },
   },
@@ -181,9 +227,12 @@ export const tuning = {
   },
 
   /** hitSize is the invisible tap area: bigger than the drawn button so it's easy to hit (≥ 48 px on a phone). */
-  muteButton: { x: 668, y: 1228, radius: 30, hitSize: 112, iconSize: 14, lineWidth: 4 },
+  muteButton: { x: 664, y: 1228, radius: 30, hitSize: 112, iconSize: 14, lineWidth: 4 },
   /** The "?" button on the Menu mirrors the mute button in the bottom-left corner. */
-  helpButton: { x: 52, y: 1228, fontSize: 34 },
+  /** The "?" size; the emoji buttons use menuBar.emojiSize. */
+  helpButton: { fontSize: 34 },
+  /** The menu's bottom row of round buttons; the mute button (muteButton.x) ends the row. */
+  menuBar: { y: 1228, helpX: 56, achievementsX: 208, archiveX: 360, themesX: 512, emojiSize: 32 },
 
   /** The daily loop: menu status, countdown, saving. */
   daily: {
@@ -198,6 +247,73 @@ export const tuning = {
   },
 
   toast: { y: 1030, height: 64, paddingX: 32, ms: 1_600, fadeMs: 200, fontSize: 30 },
+
+  /** The 📅 archive calendar. */
+  archive: {
+    titleY: 100,
+    monthY: 190,
+    /** The ‹ › month buttons. */
+    arrowsX: [80, 640],
+    weekdayY: 280,
+    firstRowY: 350,
+    rowSpacing: 96,
+    cell: 84,
+    gap: 12,
+    cornerRadius: 16,
+    dayFont: 30,
+    todayStroke: 5,
+    /** Days before launch, and future days. */
+    unavailableAlpha: 0.3,
+    tapPopScale: 1.12,
+    /** A 2×2 legend: the two rows, and the left edge of each column. */
+    legendY: [920, 964],
+    legendX: [150, 420],
+    legendSquare: 26,
+    hintY: 1030,
+    hintWidth: 600,
+    hint: 'Tap a past day to play it. Archive games don’t change your streak or stats.',
+    emptyNoteY: 560,
+    lineSpacing: 12,
+    buttonY: 1150,
+  },
+
+  /** The 🏆 list on the menu. Rows are icon, then title above description. */
+  achievementsPanel: {
+    panel: { y: 640, width: 660, height: 1190, cornerRadius: 32 },
+    titleY: 118,
+    titleSize: 44,
+    firstRowY: 210,
+    rowSpacing: 80,
+    iconX: 100,
+    iconSize: 40,
+    textX: 150,
+    /** Title and description sit this far above and below the row's centre. */
+    lineOffset: 17,
+    rowTitleSize: 28,
+    descriptionSize: 22,
+    lockedAlpha: 0.4,
+    buttonY: 1150,
+  },
+
+  /** The 🎨 theme picker on the menu: a 2×2 grid of cards. */
+  themePanel: {
+    panel: { y: 640, width: 660, height: 940, cornerRadius: 32 },
+    titleY: 236,
+    titleSize: 44,
+    columnsX: [213, 507],
+    rowsY: [470, 790],
+    card: { width: 270, height: 300, cornerRadius: 24 },
+    selectedStroke: 6,
+    /** Relative to each card's centre. */
+    planetY: -62,
+    planetRadius: 52,
+    nameY: 30,
+    statusY: 64,
+    statusSize: 22,
+    statusPadding: 16,
+    lockedAlpha: 0.4,
+    buttonY: 1030,
+  },
 
   howToPlay: {
     title: 'How to play',

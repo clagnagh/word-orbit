@@ -95,6 +95,35 @@ describe('save and restore', () => {
   });
 });
 
+describe('achievement facts in saves', () => {
+  it('keeps when the key word was found and the best combo', () => {
+    const state = run(
+      newGame(puzzle),
+      { type: 'start', now: 0 },
+      ...word('eel', 1_000),
+      ...word('steel', 2_000),
+    );
+    const level = roundTrip(state)!.progress[0]!;
+    expect(level.keyWordAtMs).toBe(2_000);
+    expect(level.bestComboTenths).toBeGreaterThan(10);
+  });
+
+  it('still loads saves from before those facts existed', () => {
+    const saved = JSON.parse(JSON.stringify(toSaved(midGame(), 7)));
+    for (const p of saved.progress) {
+      delete p.keyWordAtMs;
+      delete p.bestComboTenths;
+    }
+    expect(fromSaved(saved, puzzle, 7)).not.toBeNull();
+  });
+
+  it('rejects damaged values', () => {
+    const saved = JSON.parse(JSON.stringify(toSaved(midGame(), 7)));
+    saved.progress[0].keyWordAtMs = 'soon';
+    expect(fromSaved(saved, puzzle, 7)).toBeNull();
+  });
+});
+
 describe('ignoring saved data that does not fit', () => {
   const good = () => JSON.parse(JSON.stringify(toSaved(midGame(), 7)));
 
